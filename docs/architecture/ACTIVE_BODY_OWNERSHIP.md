@@ -48,6 +48,22 @@ When `activeBody` is `none`, either body may acquire ownership according to the
 event: `presence.detected` may acquire `physical`, and `web.session.started` may
 acquire `web`. The inactive body still receives its required rest or sleep mode.
 
+Physical availability is not active ownership. `physicalAvailable=true` means
+the physical bust can be used. `physicalAvailable=false` means the physical bust
+must not acquire active ownership, but it does not automatically make the Web
+Avatar active.
+
+While `physicalAvailable=false`, presence, mock sensor, and physical-side
+acquire requests for physical ownership are rejected. Decision logs must use
+clear unavailable reasons such as `physical_unavailable_presence_rejected`,
+`physical_unavailable_mock_sensor_rejected`, or
+`physical_unavailable_physical_acquire_rejected`.
+
+If the physical bust becomes unavailable while `activeBody` is `physical`, the
+server releases `activeBody` to `none` and logs
+`physical_unavailable_released_active_body`. Web may acquire ownership afterward
+only through a Web active request.
+
 ## v0.1 Conflict Rule
 
 If both bodies request active ownership, the server must resolve the conflict
@@ -55,11 +71,11 @@ explicitly and log the reason. The default product priority is physical bust
 first, because the bust is the primary body. The Web Avatar remains the fallback
 body when the physical bust is unavailable or intentionally inactive.
 
-Physical availability is not the same as active ownership. `available` means the
-physical bust can be used; it does not mean the physical bust is currently
-active. Web may become active while the physical bust is available if
-`activeBody` is `none`, but Web must not become active while `activeBody` is
-`physical`.
+If physical is available, simultaneous physical and Web requests resolve to
+physical with a `physical_priority` reason. If physical is unavailable, the same
+conflict resolves to Web as fallback with a reason that includes
+`physical_unavailable` and `fallback`; the server must not log
+`physical_priority` for that unavailable case.
 
 ## Safety Notes
 

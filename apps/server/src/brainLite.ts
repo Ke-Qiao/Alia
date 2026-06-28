@@ -123,14 +123,10 @@ export class BrainLite {
   ): void {
     this.state.lastPresenceAt = event.at;
 
-    if (hasPhysicalPriorityConflict(event)) {
-      this.forceAcquireBody(
-        "physical",
-        event,
-        intents,
-        logs,
-        "physical_priority_conflict_resolved",
-      );
+    if (hasActiveBodyConflict(event)) {
+      this.resolveActiveBodyConflict(event, intents, logs);
+    } else if (!this.physicalAvailable) {
+      this.requestActiveBody("physical", event, intents, logs);
     } else if (this.state.activeBody === "none") {
       this.requestActiveBody("physical", event, intents, logs);
     } else if (this.state.activeBody === "web") {
@@ -147,6 +143,19 @@ export class BrainLite {
     const nowMs = Date.parse(event.at);
     const elapsedMs =
       this.lastGreetingAtMs === null ? Infinity : nowMs - this.lastGreetingAtMs;
+
+    if (this.state.activeBody === "none") {
+      this.addDecisionLog({
+        event,
+        logs,
+        decision: "policy.presence_greeting",
+        accepted: false,
+        reason: "presence_greeting_rejected_no_active_body",
+        stateBefore: decisionBefore,
+        emittedIntentIds: [],
+      });
+      return;
+    }
 
     if (elapsedMs < this.greetingCooldownMs) {
       this.addDecisionLog({
@@ -170,7 +179,7 @@ export class BrainLite {
     this.state.currentEmotion = "happy";
     this.state.lastInteractionAt = event.at;
 
-    const target = this.state.activeBody === "web" ? "web" : "physical";
+    const target = this.state.activeBody;
     const greetingIntent = this.createIntent({
       event,
       target,
@@ -222,14 +231,8 @@ export class BrainLite {
     intents: ExpressionIntent[],
     logs: DecisionLogEntry[],
   ): void {
-    if (hasPhysicalPriorityConflict(event)) {
-      this.forceAcquireBody(
-        "physical",
-        event,
-        intents,
-        logs,
-        "physical_priority_conflict_resolved",
-      );
+    if (hasActiveBodyConflict(event)) {
+      this.resolveActiveBodyConflict(event, intents, logs);
       return;
     }
 
@@ -295,13 +298,18 @@ export class BrainLite {
     intents: ExpressionIntent[],
     logs: DecisionLogEntry[],
   ): void {
-    if (hasPhysicalPriorityConflict(event)) {
-      this.forceAcquireBody(
-        "physical",
+    if (hasActiveBodyConflict(event)) {
+      this.resolveActiveBodyConflict(event, intents, logs);
+      return;
+    }
+
+    if (body === "physical" && !this.physicalAvailable) {
+      this.rejectActiveBodyRequest(
+        body,
         event,
         intents,
         logs,
-        "physical_priority_conflict_resolved",
+        getPhysicalUnavailableRejectionReason(event.type),
       );
       return;
     }
@@ -333,7 +341,38 @@ export class BrainLite {
       return;
     }
 
-    this.forceAcquireBody(body, event, intents, logs, getOwnershipReason(body, event.type));
+    this.forceAcquireBody(
+      body,
+      event,
+      intents,
+      logs,
+      getOwnershipReason(body, event.type, this.physicalAvailable),
+    );
+  }
+
+  private resolveActiveBodyConflict(
+    event: NormalizedPerceptionEvent,
+    intents: ExpressionIntent[],
+    logs: DecisionLogEntry[],
+  ): void {
+    if (this.physicalAvailable) {
+      this.forceAcquireBody(
+        "physical",
+        event,
+        intents,
+        logs,
+        "physical_priority_conflict_resolved",
+      );
+      return;
+    }
+
+    this.forceAcquireBody(
+      "web",
+      event,
+      intents,
+      logs,
+      "physical_unavailable_web_fallback_acquired",
+    );
   }
 
   private forceAcquireBody(
@@ -426,7 +465,12 @@ export class BrainLite {
     reason: string,
   ): void {
     const stateBefore = cloneState(this.state);
-    const activeBody = this.state.activeBody === "none" ? requestedBody : this.state.activeBody;
+    const activeBody =
+      this.state.activeBody === "none" && requestedBody === "physical" && !this.physicalAvailable
+        ? "web"
+        : this.state.activeBody === "none"
+          ? requestedBody
+          : this.state.activeBody;
     const intent = this.createInactiveBodyIntent(activeBody, event, reason);
     intents.push(intent);
 
@@ -674,7 +718,7 @@ function getPhysicalAvailability(
     : "unknown";
 }
 
-function hasPhysicalPriorityConflict(event: NormalizedPerceptionEvent): boolean {
+function hasActiveBodyConflict(event: NormalizedPerceptionEvent): boolean {
   return conflictCandidates(event).some((candidate) => {
     const requestedBodies = readRequestedBodies(candidate);
     if (requestedBodies.includes("physical") && requestedBodies.includes("web")) {
@@ -719,8 +763,13 @@ function readRequestedBodies(candidate: Record<string, unknown>): string[] {
 function getOwnershipReason(
   body: Body,
   eventType: NormalizedPerceptionEvent["type"],
+  physicalAvailable: boolean,
 ): string {
   if (body === "web") {
+    if (!physicalAvailable) {
+      return "physical_unavailable_web_fallback_acquired";
+    }
+
     return eventType === "web.acquire_requested"
       ? "web_acquire_requested_active_body"
       : "web_session_acquired_active_body";
@@ -729,4 +778,18 @@ function getOwnershipReason(
   return eventType === "presence.detected"
     ? "presence_detected_acquired_physical_body"
     : "physical_interaction_acquired_active_body";
+}
+
+function getPhysicalUnavailableRejectionReason(
+  eventType: NormalizedPerceptionEvent["type"],
+): string {
+  if (eventType === "presence.detected") {
+    return "physical_unavailable_presence_rejected";
+  }
+
+  if (eventType === "mock.sensor.event") {
+    return "physical_unavailable_mock_sensor_rejected";
+  }
+
+  return "physical_unavailable_physical_acquire_rejected";
 }

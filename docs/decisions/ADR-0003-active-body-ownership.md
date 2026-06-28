@@ -23,14 +23,23 @@ sleeps with lowered head, closed eyes, and servos at fixed safe angles.
 For v0.1, active ownership is represented by exactly one `activeBody` value:
 `physical`, `web`, or `none`. A body that is merely available is not active.
 Physical availability means the bust can be used; it does not block Web
-ownership when `activeBody` is `none`.
+ownership when `activeBody` is `none`. Physical unavailability means the bust
+must not acquire active ownership; it does not automatically activate Web.
 
 If `activeBody` is `physical`, Web active requests are rejected or deferred and
 the Web Avatar remains in rest mode. If `activeBody` is `web`, normal
 physical-side presence or mock sensor events do not automatically acquire
-physical ownership; the physical bust remains in sleep pose. If both bodies
-request active ownership in the same conflict window, v0.1 resolves to physical
-priority and logs the reason.
+physical ownership; the physical bust remains in sleep pose.
+
+If the physical bust is unavailable, presence, mock sensor, and physical-side
+acquire requests for physical ownership are rejected with explicit unavailable
+reasons. If unavailability is reported while `activeBody` is `physical`, the
+server releases ownership to `none` and does not automatically activate Web.
+
+If both bodies request active ownership in the same conflict window, v0.1
+resolves to physical priority only when the physical bust is available. If the
+physical bust is unavailable, Web wins as the fallback and the decision reason
+must include both physical unavailability and fallback.
 
 ## Consequences
 

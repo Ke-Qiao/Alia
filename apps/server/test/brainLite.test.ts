@@ -147,6 +147,133 @@ test("physical unavailable releases physical and allows web fallback", () => {
   assertHasIntent(webResult.intents, "physical", "body.sleep");
 });
 
+test("physical unavailable blocks presence from acquiring physical ownership", () => {
+  const brain = new BrainLite({
+    now: fixedClock("2026-06-28T00:00:00.000Z"),
+  });
+
+  brain.handleEvent({ type: "physical.bust.unavailable" });
+  const result = brain.handleEvent({ type: "presence.detected" });
+
+  assert.equal(result.state.activeBody, "none");
+  assertHasIntent(result.intents, "physical", "body.sleep");
+  assertNoIntent(result.intents, "physical", "greeting");
+  assertLogReasonIncludes(result.logs, "physical_unavailable_presence_rejected");
+});
+
+test("physical unavailable presence rejection remains explicit while web is active", () => {
+  const brain = new BrainLite({
+    now: fixedClock("2026-06-28T00:00:00.000Z"),
+  });
+
+  brain.handleEvent({ type: "physical.bust.unavailable" });
+  brain.handleEvent({ type: "web.session.started" });
+  const result = brain.handleEvent({ type: "presence.detected" });
+
+  assert.equal(result.state.activeBody, "web");
+  assertHasIntent(result.intents, "physical", "body.sleep");
+  assertLogReasonIncludes(result.logs, "physical_unavailable_presence_rejected");
+});
+
+test("physical unavailable blocks mock user approach from acquiring physical ownership", () => {
+  const brain = new BrainLite({
+    now: fixedClock("2026-06-28T00:00:00.000Z"),
+  });
+
+  brain.handleEvent({ type: "physical.bust.unavailable" });
+  const result = brain.handleEvent({
+    type: "mock.sensor.event",
+    payload: {
+      name: "user_approached",
+      bodyTarget: "physical",
+    },
+  });
+
+  assert.equal(result.state.activeBody, "none");
+  assertHasIntent(result.intents, "physical", "body.sleep");
+  assertNoIntent(result.intents, "physical", "greeting");
+  assertLogReasonIncludes(result.logs, "physical_unavailable_mock_sensor_rejected");
+});
+
+test("physical unavailable rejects physical acquire requests", () => {
+  const brain = new BrainLite({
+    now: fixedClock("2026-06-28T00:00:00.000Z"),
+  });
+
+  brain.handleEvent({ type: "physical.bust.unavailable" });
+  const result = brain.handleEvent({ type: "physical.acquire_requested" });
+
+  assert.equal(result.state.activeBody, "none");
+  assertHasIntent(result.intents, "physical", "body.sleep");
+  assertLogReasonIncludes(result.logs, "physical_unavailable_physical_acquire_rejected");
+  assert.equal(
+    result.logs.find((log) => log.decision === "ownership.physical_acquired")
+      ?.accepted,
+    false,
+  );
+});
+
+test("physical unavailable while physical active releases ownership to none", () => {
+  const brain = new BrainLite({
+    now: fixedClock("2026-06-28T00:00:00.000Z"),
+  });
+
+  brain.handleEvent({ type: "physical.interaction.started" });
+  const result = brain.handleEvent({ type: "physical.bust.unavailable" });
+
+  assert.equal(result.state.activeBody, "none");
+  assertLogReasonIncludes(result.logs, "physical_unavailable_released_active_body");
+});
+
+test("physical unavailable allows web to acquire as fallback", () => {
+  const brain = new BrainLite({
+    now: fixedClock("2026-06-28T00:00:00.000Z"),
+  });
+
+  brain.handleEvent({ type: "physical.bust.unavailable" });
+  const result = brain.handleEvent({ type: "web.session.started" });
+
+  assert.equal(result.state.activeBody, "web");
+  assertHasIntent(result.intents, "physical", "body.sleep");
+  assertLogReasonIncludes(result.logs, "physical_unavailable_web_fallback_acquired");
+});
+
+test("web fallback acquisition log includes unavailable and fallback", () => {
+  const brain = new BrainLite({
+    now: fixedClock("2026-06-28T00:00:00.000Z"),
+  });
+
+  brain.handleEvent({ type: "physical.bust.unavailable" });
+  const result = brain.handleEvent({ type: "web.acquire_requested" });
+
+  const webLog = result.logs.find(
+    (log) => log.decision === "ownership.web_acquired",
+  );
+  assert.ok(webLog);
+  assert.equal(webLog.accepted, true);
+  assert.match(webLog.reason, /physical_unavailable/);
+  assert.match(webLog.reason, /fallback/);
+});
+
+test("conflict while physical unavailable resolves to web fallback", () => {
+  const brain = new BrainLite({
+    now: fixedClock("2026-06-28T00:00:00.000Z"),
+  });
+
+  brain.handleEvent({ type: "physical.bust.unavailable" });
+  const result = brain.handleEvent({
+    type: "web.session.started",
+    payload: {
+      requestedBodies: ["physical", "web"],
+    },
+  });
+
+  assert.equal(result.state.activeBody, "web");
+  assertHasIntent(result.intents, "physical", "body.sleep");
+  assertLogReasonIncludes(result.logs, "physical_unavailable_web_fallback_acquired");
+  assertNoLogReasonIncludes(result.logs, "physical_priority");
+});
+
 test("presence greeting respects cooldown", () => {
   const brain = new BrainLite({
     greetingCooldownMs: 60_000,
@@ -272,6 +399,17 @@ function assertLogReasonIncludes(
   assert.ok(
     logs.some((log) => log.reason.includes(expected)),
     `Expected a decision log reason containing ${expected}.`,
+  );
+}
+
+function assertNoLogReasonIncludes(
+  logs: { reason: string }[],
+  expected: string,
+): void {
+  assert.equal(
+    logs.some((log) => log.reason.includes(expected)),
+    false,
+    `Expected no decision log reason containing ${expected}.`,
   );
 }
 

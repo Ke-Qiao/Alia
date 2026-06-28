@@ -28,6 +28,11 @@ The server keeps in-memory state:
 There is no persistence in v0.1. Restarting the server resets state and
 decision logs.
 
+The server also keeps a separate in-memory physical availability flag. Physical
+availability is not active ownership: unavailable physical hardware cannot
+acquire `activeBody`, and becoming unavailable does not automatically make Web
+active.
+
 ## Protocol
 
 Shared protocol contracts live in `packages/protocol/src/index.ts`.
@@ -84,14 +89,30 @@ When `activeBody` is `web`, normal physical-side presence or mock sensor events
 are rejected as active ownership requests with a `web_currently_active` reason.
 The physical bust remains or enters sleep pose.
 
+When physical is unavailable, `presence.detected`, `mock.sensor.event` user
+approach, and `physical.acquire_requested` or equivalent physical-side requests
+must not acquire `physical`. They are rejected with unavailable reasons such as
+`physical_unavailable_presence_rejected`,
+`physical_unavailable_mock_sensor_rejected`, or
+`physical_unavailable_physical_acquire_rejected`.
+
+If `physical.bust.unavailable` occurs while `activeBody` is `physical`,
+Brain-lite releases ownership to `none`, logs
+`physical_unavailable_released_active_body`, and does not automatically activate
+Web.
+
 If both bodies request active ownership in the same conflict window, v0.1
-resolves to physical priority and logs a `physical_priority` reason.
+resolves to physical priority and logs a `physical_priority` reason only when
+physical is available. If physical is unavailable, Web wins as fallback and the
+reason includes `physical_unavailable` and `fallback`.
 
 ## Proactive Policy
 
 `presence.detected` updates `lastPresenceAt`. If there is no active body, the
 server acquires `physical` by default because the physical bust is the primary
-product body.
+product body, unless physical is unavailable. When physical is unavailable, the
+presence path records a rejected ownership decision and does not emit a physical
+greeting.
 
 The v0.1 policy may emit a deterministic greeting when cooldown allows:
 
