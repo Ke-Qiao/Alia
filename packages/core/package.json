@@ -1,0 +1,15 @@
+{
+  "name": "@alia/core",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared core behavior placeholder for Project Alia Rebuild.",
+  "type": "module",
+  "scripts": {
+    "lint": "node -e \"console.log('@alia/core: lint placeholder; no lint rules configured yet')\"",
+    "typecheck": "node -e \"console.log('@alia/core: typecheck placeholder; no TypeScript source yet')\"",
+    "test": "node -e \"console.log('@alia/core: test placeholder; no tests implemented yet')\""
+  },
+  "dependencies": {
+    "@alia/protocol": "workspace:*"
+  }
+}

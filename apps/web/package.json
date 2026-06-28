@@ -1,0 +1,15 @@
+{
+  "name": "@alia/web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Web 3D Avatar placeholder for Project Alia Rebuild.",
+  "type": "module",
+  "scripts": {
+    "lint": "node -e \"console.log('@alia/web: lint placeholder; no lint rules configured yet')\"",
+    "typecheck": "node -e \"console.log('@alia/web: typecheck placeholder; no TypeScript source yet')\"",
+    "test": "node -e \"console.log('@alia/web: test placeholder; no tests implemented yet')\""
+  },
+  "dependencies": {
+    "@alia/protocol": "workspace:*"
+  }
+}

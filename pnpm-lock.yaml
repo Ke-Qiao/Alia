@@ -1,0 +1,38 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .: {}
+
+  apps/embedded-mock:
+    dependencies:
+      '@alia/protocol':
+        specifier: workspace:*
+        version: link:../../packages/protocol
+
+  apps/server:
+    dependencies:
+      '@alia/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@alia/protocol':
+        specifier: workspace:*
+        version: link:../../packages/protocol
+
+  apps/web:
+    dependencies:
+      '@alia/protocol':
+        specifier: workspace:*
+        version: link:../../packages/protocol
+
+  packages/core:
+    dependencies:
+      '@alia/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+
+  packages/protocol: {}

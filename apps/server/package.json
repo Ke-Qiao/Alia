@@ -1,0 +1,16 @@
+{
+  "name": "@alia/server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Brain-lite server placeholder for Project Alia Rebuild.",
+  "type": "module",
+  "scripts": {
+    "lint": "node -e \"console.log('@alia/server: lint placeholder; no lint rules configured yet')\"",
+    "typecheck": "node -e \"console.log('@alia/server: typecheck placeholder; no TypeScript source yet')\"",
+    "test": "node -e \"console.log('@alia/server: test placeholder; no tests implemented yet')\""
+  },
+  "dependencies": {
+    "@alia/core": "workspace:*",
+    "@alia/protocol": "workspace:*"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "project-alia-rebuild",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Mock-first embodied emotional companion monorepo.",
+  "packageManager": "pnpm@11.7.0",
+  "type": "module",
+  "scripts": {
+    "lint": "pnpm -r --if-present lint",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "test": "pnpm -r --if-present test"
+  }
+}

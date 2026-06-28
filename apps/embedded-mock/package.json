@@ -1,0 +1,15 @@
+{
+  "name": "@alia/embedded-mock",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Mock sensor and hardware runtime placeholder for Project Alia Rebuild.",
+  "type": "module",
+  "scripts": {
+    "lint": "node -e \"console.log('@alia/embedded-mock: lint placeholder; no lint rules configured yet')\"",
+    "typecheck": "node -e \"console.log('@alia/embedded-mock: typecheck placeholder; no TypeScript source yet')\"",
+    "test": "node -e \"console.log('@alia/embedded-mock: test placeholder; no tests implemented yet')\""
+  },
+  "dependencies": {
+    "@alia/protocol": "workspace:*"
+  }
+}
