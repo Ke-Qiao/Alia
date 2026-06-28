@@ -5,11 +5,21 @@
   "description": "Web 3D Avatar placeholder for Project Alia Rebuild.",
   "type": "module",
   "scripts": {
-    "lint": "node -e \"console.log('@alia/web: lint placeholder; no lint rules configured yet')\"",
-    "typecheck": "node -e \"console.log('@alia/web: typecheck placeholder; no TypeScript source yet')\"",
+    "dev": "vite --host 127.0.0.1",
+    "build": "pnpm exec tsc -p tsconfig.json --noEmit && vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "lint": "pnpm exec tsc -p tsconfig.json --noEmit",
+    "typecheck": "pnpm exec tsc -p tsconfig.json --noEmit",
     "test": "node -e \"console.log('@alia/web: test placeholder; no tests implemented yet')\""
   },
   "dependencies": {
-    "@alia/protocol": "workspace:*"
+    "@alia/protocol": "workspace:*",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "vite": "^8.1.0"
   }
 }

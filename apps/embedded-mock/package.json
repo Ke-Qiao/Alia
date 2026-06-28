@@ -4,10 +4,19 @@
   "private": true,
   "description": "Mock sensor and hardware runtime placeholder for Project Alia Rebuild.",
   "type": "module",
+  "bin": {
+    "alia-embedded-mock": "./src/index.ts"
+  },
   "scripts": {
-    "lint": "node -e \"console.log('@alia/embedded-mock: lint placeholder; no lint rules configured yet')\"",
-    "typecheck": "node -e \"console.log('@alia/embedded-mock: typecheck placeholder; no TypeScript source yet')\"",
-    "test": "node -e \"console.log('@alia/embedded-mock: test placeholder; no tests implemented yet')\""
+    "mock": "node src/index.ts",
+    "mock:run": "node src/index.ts run",
+    "mock:presence": "node src/index.ts presence",
+    "mock:presence-lost": "node src/index.ts presence-lost",
+    "mock:event": "node src/index.ts mock-event",
+    "mock:web-active-conflict-test": "node src/index.ts web-active-conflict-test",
+    "lint": "pnpm exec tsc -p tsconfig.json --noEmit",
+    "typecheck": "pnpm exec tsc -p tsconfig.json --noEmit",
+    "test": "node src/index.ts self-test"
   },
   "dependencies": {
     "@alia/protocol": "workspace:*"

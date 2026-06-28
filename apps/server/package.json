@@ -4,10 +4,15 @@
   "private": true,
   "description": "Brain-lite server placeholder for Project Alia Rebuild.",
   "type": "module",
+  "exports": {
+    ".": "./src/brainLite.ts"
+  },
   "scripts": {
-    "lint": "node -e \"console.log('@alia/server: lint placeholder; no lint rules configured yet')\"",
-    "typecheck": "node -e \"console.log('@alia/server: typecheck placeholder; no TypeScript source yet')\"",
-    "test": "node -e \"console.log('@alia/server: test placeholder; no tests implemented yet')\""
+    "dev": "node --watch src/server.ts",
+    "start": "node src/server.ts",
+    "lint": "pnpm exec tsc -p tsconfig.json --noEmit",
+    "typecheck": "pnpm exec tsc -p tsconfig.json --noEmit",
+    "test": "node --test test/*.test.ts"
   },
   "dependencies": {
     "@alia/core": "workspace:*",
