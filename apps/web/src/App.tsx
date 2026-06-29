@@ -11,6 +11,7 @@ import {
   WEB_AVATAR_RELEASE_PATH,
   WEB_AVATAR_REQUEST_ACTIVE_PATH,
   getDeveloperPanelModel,
+  getWebActivationFeedback,
   getWebBodyMode,
 } from "./avatarModel.ts";
 
@@ -111,14 +112,23 @@ export function App() {
   }, []);
 
   async function requestWebActivation(): Promise<void> {
-    await postBrainLiteCommand(WEB_AVATAR_REQUEST_ACTIVE_PATH);
+    await postBrainLiteCommand(
+      WEB_AVATAR_REQUEST_ACTIVE_PATH,
+      getWebActivationFeedback,
+    );
   }
 
   async function releaseWebActivation(): Promise<void> {
-    await postBrainLiteCommand(WEB_AVATAR_RELEASE_PATH);
+    await postBrainLiteCommand(
+      WEB_AVATAR_RELEASE_PATH,
+      () => "Web release request accepted.",
+    );
   }
 
-  async function postBrainLiteCommand(path: string): Promise<void> {
+  async function postBrainLiteCommand(
+    path: string,
+    getSuccessMessage: (result: BrainLiteResultPayload) => string,
+  ): Promise<void> {
     setCommandState({
       pending: true,
       message: null,
@@ -139,7 +149,7 @@ export function App() {
       setLatestExpressionIntent((current) => result.intents.at(-1) ?? current);
       setCommandState({
         pending: false,
-        message: "Command accepted",
+        message: getSuccessMessage(result),
       });
     } catch (error) {
       setCommandState({

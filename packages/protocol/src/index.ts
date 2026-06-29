@@ -207,7 +207,9 @@ export interface ExpressionIntent {
 
 export const decisionKinds = [
   "ownership.web_acquired",
+  "ownership.web_acquire_rejected",
   "ownership.physical_acquired",
+  "ownership.physical_acquire_rejected",
   "ownership.released",
   "policy.presence_greeting",
   "policy.presence_left",
