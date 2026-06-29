@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
+    "start": "vite --host 127.0.0.1",
     "build": "pnpm exec tsc -p tsconfig.json --noEmit && vite build",
     "preview": "vite preview --host 127.0.0.1",
     "lint": "pnpm exec tsc -p tsconfig.json --noEmit",

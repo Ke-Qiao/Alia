@@ -3,6 +3,7 @@ import { pathToFileURL } from "node:url";
 import {
   BRAIN_LITE_ENDPOINTS,
   isPerceptionEventType,
+  type ExpressionIntent,
   type StreamEventType,
 } from "@alia/protocol";
 
@@ -29,9 +30,15 @@ interface ServerEvent {
   data: unknown;
 }
 
+interface EmbeddedMockRegistration {
+  callbackUrl: string;
+  registeredAt: string;
+}
+
 export function createBrainLiteHttpServer(brain = new BrainLite()) {
   const clients = new Map<string, StreamClient>();
   let nextStreamSequence = 0;
+  let embeddedMockRegistration: EmbeddedMockRegistration | null = null;
 
   function publish(type: StreamEventType, data: unknown): void {
     const event: ServerEvent = {
@@ -46,7 +53,7 @@ export function createBrainLiteHttpServer(brain = new BrainLite()) {
     }
   }
 
-  function publishResult(result: BrainLiteResult): void {
+  async function publishResult(result: BrainLiteResult): Promise<void> {
     for (const log of result.logs) {
       publish("decision.logged", log);
     }
@@ -56,6 +63,61 @@ export function createBrainLiteHttpServer(brain = new BrainLite()) {
     }
 
     publish("state.updated", result.state);
+    await dispatchToEmbeddedMock(result);
+  }
+
+  async function dispatchToEmbeddedMock(result: BrainLiteResult): Promise<void> {
+    if (embeddedMockRegistration === null) {
+      return;
+    }
+
+    const physicalIntents = result.intents.filter(targetsPhysical);
+
+    if (physicalIntents.length > 0) {
+      for (const intent of physicalIntents) {
+        await postEmbeddedMockJson(embeddedMockRegistration.callbackUrl, {
+          intent,
+        });
+      }
+      return;
+    }
+
+    const shouldDispatchOwnership = result.logs.some(
+      (log) => log.accepted && log.decision.startsWith("ownership."),
+    );
+
+    if (shouldDispatchOwnership) {
+      await postEmbeddedMockJson(embeddedMockRegistration.callbackUrl, {
+        activeBody: result.state.activeBody,
+      });
+    }
+  }
+
+  async function postEmbeddedMockJson(url: string, body: unknown): Promise<void> {
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`Embedded mock returned ${response.status}: ${text}`);
+      }
+
+      logServerEvent("embedded.dispatch.sent", {
+        callbackUrl: url,
+        dispatch: summarizeDispatchBody(body),
+      });
+    } catch (error) {
+      logServerEvent("embedded.dispatch.failed", {
+        callbackUrl: url,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 
   const server = createServer(async (request, response) => {
@@ -111,7 +173,7 @@ export function createBrainLiteHttpServer(brain = new BrainLite()) {
           request.method === "POST" ? await readOptionalJson(request) : {};
         const event = buildPresenceEvent(body, url);
         const result = brain.handleEvent(event);
-        publishResult(result);
+        await publishResult(result);
         sendJson(response, 202, result);
         return;
       }
@@ -126,7 +188,7 @@ export function createBrainLiteHttpServer(brain = new BrainLite()) {
           source: "web",
           payload: getPayloadFromUnknown(body),
         });
-        publishResult(result);
+        await publishResult(result);
         sendJson(response, 202, result);
         return;
       }
@@ -141,7 +203,7 @@ export function createBrainLiteHttpServer(brain = new BrainLite()) {
           source: "web",
           payload: getPayloadFromUnknown(body),
         });
-        publishResult(result);
+        await publishResult(result);
         sendJson(response, 202, result);
         return;
       }
@@ -151,9 +213,16 @@ export function createBrainLiteHttpServer(brain = new BrainLite()) {
         url.pathname === BRAIN_LITE_ENDPOINTS.embeddedMockConnect
       ) {
         const body = await readOptionalJson(request);
+        embeddedMockRegistration = readEmbeddedMockRegistration(body);
+        if (embeddedMockRegistration !== null) {
+          logServerEvent("embedded-mock.registered", {
+            callbackUrl: embeddedMockRegistration.callbackUrl,
+            registeredAt: embeddedMockRegistration.registeredAt,
+          });
+        }
         sendJson(response, 202, {
           ok: true,
-          registered: true,
+          registered: embeddedMockRegistration !== null,
           runtime: "embedded-mock",
           received: isObject(body) ? body : {},
           state: brain.getState(),
@@ -170,7 +239,7 @@ export function createBrainLiteHttpServer(brain = new BrainLite()) {
         const body = await readJson(request);
         const event = parsePerceptionEvent(body);
         const result = brain.handleEvent(event);
-        publishResult(result);
+        await publishResult(result);
         sendJson(response, 202, result);
         return;
       }
@@ -194,6 +263,54 @@ export function createBrainLiteHttpServer(brain = new BrainLite()) {
     brain,
     server,
   };
+}
+
+function targetsPhysical(intent: ExpressionIntent): boolean {
+  return intent.target === "physical";
+}
+
+function readEmbeddedMockRegistration(body: unknown): EmbeddedMockRegistration | null {
+  if (!isObject(body) || typeof body.callbackUrl !== "string") {
+    return null;
+  }
+
+  try {
+    const callbackUrl = new URL(body.callbackUrl);
+    if (callbackUrl.protocol !== "http:" && callbackUrl.protocol !== "https:") {
+      return null;
+    }
+
+    return {
+      callbackUrl: callbackUrl.toString(),
+      registeredAt: new Date().toISOString(),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function summarizeDispatchBody(body: unknown): Record<string, unknown> {
+  if (!isObject(body)) {
+    return { kind: "unknown" };
+  }
+
+  if (isObject(body.intent)) {
+    return {
+      kind: "expression.intent",
+      intentId: body.intent.id,
+      intentKind: body.intent.kind,
+      target: body.intent.target,
+    };
+  }
+
+  if (typeof body.activeBody === "string") {
+    return {
+      kind: "ownership.assignment",
+      activeBody: body.activeBody,
+    };
+  }
+
+  return { kind: "unknown" };
 }
 
 function buildPresenceEvent(body: unknown, url: URL): InternalServerInputEvent {
@@ -383,6 +500,17 @@ function setCorsHeaders(response: ServerResponse): void {
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function logServerEvent(event: string, details: Record<string, unknown>): void {
+  console.log(
+    JSON.stringify({
+      component: "brain-lite",
+      event,
+      timestamp: new Date().toISOString(),
+      details,
+    }),
+  );
 }
 
 class RequestError extends Error {

@@ -8,6 +8,8 @@
     "alia-embedded-mock": "./src/index.ts"
   },
   "scripts": {
+    "dev": "node --watch src/index.ts run",
+    "start": "node src/index.ts run",
     "mock": "node src/index.ts",
     "mock:run": "node src/index.ts run",
     "mock:presence": "node src/index.ts presence",
@@ -15,7 +17,13 @@
     "mock:event": "node src/index.ts mock-event",
     "mock:physical-available": "node src/index.ts physical-available",
     "mock:physical-unavailable": "node src/index.ts physical-unavailable",
+    "mock:web-active": "node src/index.ts web-active",
     "mock:web-active-conflict-test": "node src/index.ts web-active-conflict-test",
+    "mock:presence:dry-run": "node src/index.ts presence --dry-run",
+    "mock:presence-lost:dry-run": "node src/index.ts presence-lost --dry-run",
+    "mock:physical-available:dry-run": "node src/index.ts physical-available --dry-run",
+    "mock:physical-unavailable:dry-run": "node src/index.ts physical-unavailable --dry-run",
+    "mock:web-active:dry-run": "node src/index.ts web-active --dry-run",
     "lint": "pnpm exec tsc -p tsconfig.json --noEmit",
     "typecheck": "pnpm exec tsc -p tsconfig.json --noEmit",
     "test": "node src/index.ts self-test"
