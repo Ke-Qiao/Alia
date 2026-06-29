@@ -119,6 +119,10 @@ Then request Web Avatar ownership:
 pnpm demo:web-active
 ```
 
+`pnpm demo:web-active` is a scripted helper that simulates a Web active
+ownership request through the demo CLI. For strict UI-origin verification, use
+the Web Avatar button or POST `/api/v0/web-avatar/request-active`.
+
 Expected Brain-lite state:
 
 - `activeBody` is `web`.
