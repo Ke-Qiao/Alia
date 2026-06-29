@@ -31,6 +31,7 @@ type SensorCommand =
   | "presence"
   | "presence-lost"
   | "mock-event"
+  | "web-active"
   | "web-active-conflict-test"
   | "physical-available"
   | "physical-unavailable";
@@ -70,6 +71,7 @@ async function main(rawArgs: string[]): Promise<void> {
     case "presence":
     case "presence-lost":
     case "mock-event":
+    case "web-active":
     case "web-active-conflict-test":
     case "physical-available":
     case "physical-unavailable":
@@ -120,7 +122,7 @@ function createOutboundEvent(
     },
   };
 
-  if (command === "web-active-conflict-test") {
+  if (command === "web-active" || command === "web-active-conflict-test") {
     return {
       ...base,
       type: "web.session.started",
@@ -132,7 +134,9 @@ function createOutboundEvent(
         sessionId:
           typeof payload.sessionId === "string"
             ? payload.sessionId
-            : "embedded-mock-web-active-conflict-test",
+            : command === "web-active"
+              ? "embedded-mock-web-active-demo"
+              : "embedded-mock-web-active-conflict-test",
         userId: typeof payload.userId === "string" ? payload.userId : undefined,
       },
     };
@@ -212,6 +216,12 @@ function defaultPayloadForCommand(command: SensorCommand): Record<string, unknow
       return { presence: false, legacyEventName: "presence.lost" };
     case "mock-event":
       return { scenario: "manual" };
+    case "web-active":
+      return {
+        scenario: "web-active",
+        expectedPhysicalAction: "enterSleepPose",
+        expectedPhysicalPose: PHYSICAL_SLEEP_POSE.pose,
+      };
     case "web-active-conflict-test":
       return {
         scenario: "web-active-conflict-test",
@@ -680,6 +690,9 @@ function runSelfTest(): void {
     status: "unavailable",
     isMock: true,
   });
+  assertOutboundEvent(createOutboundEvent("web-active", {}), "web.session.started", {
+    sessionId: "embedded-mock-web-active-demo",
+  });
 
   runtime.applyLegacyExpressionIntent({
     id: "intent_test_greeting",
@@ -745,6 +758,7 @@ function printUsage(): void {
   pnpm --filter @alia/embedded-mock mock:event -- --payload '{"kind":"button.press"}'
   pnpm --filter @alia/embedded-mock mock:physical-available -- --dry-run
   pnpm --filter @alia/embedded-mock mock:physical-unavailable -- --dry-run
+  pnpm --filter @alia/embedded-mock mock:web-active -- --dry-run
   pnpm --filter @alia/embedded-mock mock:web-active-conflict-test -- --dry-run
 
 Options:

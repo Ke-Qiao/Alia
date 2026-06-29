@@ -6,6 +6,15 @@
   "packageManager": "pnpm@11.7.0",
   "type": "module",
   "scripts": {
+    "dev": "pnpm -r --parallel --filter @alia/server --filter @alia/web --filter @alia/embedded-mock run dev",
+    "dev:server": "pnpm --filter @alia/server dev",
+    "dev:web": "pnpm --filter @alia/web dev",
+    "dev:embedded": "pnpm --filter @alia/embedded-mock dev",
+    "demo:presence": "pnpm --filter @alia/embedded-mock mock:presence",
+    "demo:presence-lost": "pnpm --filter @alia/embedded-mock mock:presence-lost",
+    "demo:physical-available": "pnpm --filter @alia/embedded-mock mock:physical-available",
+    "demo:physical-unavailable": "pnpm --filter @alia/embedded-mock mock:physical-unavailable",
+    "demo:web-active": "pnpm --filter @alia/embedded-mock mock:web-active",
     "lint": "pnpm -r --if-present lint",
     "typecheck": "pnpm -r --if-present typecheck",
     "test": "pnpm -r --if-present test"
