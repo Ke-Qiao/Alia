@@ -1,6 +1,5 @@
 import {
   PHYSICAL_ACTIONS,
-  PHYSICAL_SLEEP_POSE,
   isPhysicalAction,
   type ActiveBody,
   type BodyTarget,
@@ -8,8 +7,20 @@ import {
   type PhysicalAction,
 } from "@alia/protocol";
 
-export { PHYSICAL_ACTIONS, PHYSICAL_SLEEP_POSE, isPhysicalAction };
+export { PHYSICAL_ACTIONS, isPhysicalAction };
 export type { PhysicalAction };
+
+export const PHYSICAL_SLEEP_POSE = {
+  pose: "fixed_safe_sleep",
+  head: "lowered",
+  eyes: "closed",
+  safeServoFixedAngles: {
+    headTilt: 15,
+    neckPan: 0,
+    eyelids: 100,
+  },
+  servoControl: "mock-fixed-safe-pose",
+} as const;
 
 export type PhysicalMode = "active" | "rest" | "sleep";
 

@@ -10,7 +10,7 @@
     "preview": "vite preview --host 127.0.0.1",
     "lint": "pnpm exec tsc -p tsconfig.json --noEmit",
     "typecheck": "pnpm exec tsc -p tsconfig.json --noEmit",
-    "test": "node -e \"console.log('@alia/web: test placeholder; no tests implemented yet')\""
+    "test": "node --test test/*.test.ts"
   },
   "dependencies": {
     "@alia/protocol": "workspace:*",

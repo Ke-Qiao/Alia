@@ -13,6 +13,7 @@ import {
   DEFAULT_EMBEDDED_MOCK_PORT,
   EMBEDDED_MOCK_ENDPOINTS,
   EXPRESSION_INTENT_KINDS,
+  assertAliaEvent,
   expressionEventTypes,
   isPerceptionEventType,
 } from "@alia/protocol";
@@ -26,7 +27,13 @@ import {
   type PhysicalActionRequest,
 } from "./runtime.ts";
 
-type SensorCommand = "presence" | "presence-lost" | "mock-event" | "web-active-conflict-test";
+type SensorCommand =
+  | "presence"
+  | "presence-lost"
+  | "mock-event"
+  | "web-active-conflict-test"
+  | "physical-available"
+  | "physical-unavailable";
 
 interface CliOptions {
   brainUrl: string;
@@ -64,6 +71,8 @@ async function main(rawArgs: string[]): Promise<void> {
     case "presence-lost":
     case "mock-event":
     case "web-active-conflict-test":
+    case "physical-available":
+    case "physical-unavailable":
       await emitSensorCommand(command, options);
       return;
 
@@ -129,6 +138,30 @@ function createOutboundEvent(
     };
   }
 
+  if (command === "physical-available" || command === "physical-unavailable") {
+    const status = command === "physical-available" ? "available" : "unavailable";
+
+    return {
+      ...base,
+      type:
+        command === "physical-available"
+          ? "physical.bust.available"
+          : "physical.bust.unavailable",
+      source: {
+        kind: "physical" as const,
+        id: "embedded-mock",
+      },
+      payload: {
+        status,
+        isMock: true,
+        detail:
+          typeof payload.detail === "string"
+            ? payload.detail
+            : `Embedded mock physical bust is ${status}.`,
+      },
+    };
+  }
+
   const type =
     command === "presence"
       ? "presence.detected"
@@ -185,8 +218,12 @@ function defaultPayloadForCommand(command: SensorCommand): Record<string, unknow
         webAvatarActive: true,
         physicalBustAvailable: true,
         expectedPhysicalAction: "enterSleepPose",
-        expectedPhysicalPose: PHYSICAL_SLEEP_POSE,
+        expectedPhysicalPose: PHYSICAL_SLEEP_POSE.pose,
       };
+    case "physical-available":
+      return { status: "available", isMock: true };
+    case "physical-unavailable":
+      return { status: "unavailable", isMock: true };
   }
 }
 
@@ -619,6 +656,31 @@ function runSelfTest(): void {
     log: (entry) => logs.push(entry),
   });
 
+  assertOutboundEvent(createOutboundEvent("presence", {}), "presence.detected", {
+    bodyTarget: "physical",
+    confidence: 1,
+  });
+  assertOutboundEvent(createOutboundEvent("presence-lost", {}), "presence.lost", {
+    bodyTarget: "physical",
+    confidence: 1,
+  });
+  assertOutboundEvent(
+    createOutboundEvent("mock-event", { name: "manual_button" }),
+    "mock.sensor.event",
+    {
+      name: "manual_button",
+      bodyTarget: "physical",
+    },
+  );
+  assertOutboundEvent(createOutboundEvent("physical-available", {}), "physical.bust.available", {
+    status: "available",
+    isMock: true,
+  });
+  assertOutboundEvent(createOutboundEvent("physical-unavailable", {}), "physical.bust.unavailable", {
+    status: "unavailable",
+    isMock: true,
+  });
+
   runtime.applyLegacyExpressionIntent({
     id: "intent_test_greeting",
     kind: "greeting",
@@ -647,8 +709,32 @@ function runSelfTest(): void {
   assert.equal(runtime.getState().mode, "sleep");
   assert.equal(runtime.getState().head, "lowered");
   assert.equal(runtime.getState().eyes, "closed");
+  assert.deepEqual(
+    runtime.getState().safeServoFixedAngles,
+    PHYSICAL_SLEEP_POSE.safeServoFixedAngles,
+  );
+
+  const unknownActionCount = applyInboundBrainLiteMessage(
+    { target: "physical", action: "unknownAction" },
+    runtime,
+  );
+  assert.equal(unknownActionCount, 0);
+  assert.throws(() => parseJsonObject("[]", "--payload"), /must be a JSON object/);
 
   console.log("@alia/embedded-mock: self-test passed");
+}
+
+function assertOutboundEvent(
+  event: PerceptionEvent,
+  expectedType: PerceptionEvent["type"],
+  expectedPayload: Record<string, unknown>,
+): void {
+  assertAliaEvent(event);
+  assert.equal(event.type, expectedType);
+
+  for (const [key, value] of Object.entries(expectedPayload)) {
+    assert.deepEqual(event.payload[key as keyof typeof event.payload], value);
+  }
 }
 
 function printUsage(): void {
@@ -657,6 +743,8 @@ function printUsage(): void {
   pnpm --filter @alia/embedded-mock mock:presence -- --brain-url http://127.0.0.1:3000
   pnpm --filter @alia/embedded-mock mock:presence-lost
   pnpm --filter @alia/embedded-mock mock:event -- --payload '{"kind":"button.press"}'
+  pnpm --filter @alia/embedded-mock mock:physical-available -- --dry-run
+  pnpm --filter @alia/embedded-mock mock:physical-unavailable -- --dry-run
   pnpm --filter @alia/embedded-mock mock:web-active-conflict-test -- --dry-run
 
 Options:

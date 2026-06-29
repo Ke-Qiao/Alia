@@ -62,7 +62,8 @@ body never appears active when the physical bust owns embodiment.
 The panel shows only v0.1 observability fields:
 
 - `activeBody`
-- `currentMode`
+- `currentMode` from Brain-lite state
+- derived `webMode`
 - `currentEmotion`
 - physical body mode
 - last decision log
@@ -77,3 +78,10 @@ It also exposes two manual controls:
 
 The v0.1 Web Avatar does not include full VRChat integration, production
 authentication, a complex VRM expression system, accounts, or chat UI.
+
+## Test Scope
+
+`@alia/web` uses Node built-in tests for pure body mode and developer panel
+mapping logic. SSE rendering and browser DOM updates are not covered by
+automated tests in v0.1 because the current app intentionally avoids adding a
+browser test framework.

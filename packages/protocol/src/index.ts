@@ -63,7 +63,6 @@ export const sourceKinds = [
   "mock.hardware",
   "mock.script",
 ] as const;
-export const perceptionEventSources = ["mock", "script", "web", "physical"] as const;
 
 export const ownershipReasonCodes = [
   "user_presence_detected",
@@ -136,16 +135,6 @@ export const DEFAULT_EMBEDDED_MOCK_PORT = 3101;
 
 export const EXPRESSION_INTENT_KINDS = expressionIntentKinds;
 export const PHYSICAL_ACTIONS = physicalActions;
-export const PHYSICAL_SLEEP_POSE = {
-  head: "lowered",
-  eyes: "closed",
-  safeServoFixedAngles: {
-    headTilt: 15,
-    neckPan: 0,
-    eyelids: 100,
-  },
-  servoControl: "mock-fixed-safe-pose",
-} as const;
 
 export type PerceptionEventType = (typeof perceptionEventTypes)[number];
 export type BrainEventType = (typeof brainEventTypes)[number];
@@ -160,7 +149,6 @@ export type Body = OwnedBody;
 export type BodyMode = (typeof bodyModes)[number];
 export type CurrentMode = (typeof currentModes)[number];
 export type EventSourceKind = (typeof sourceKinds)[number];
-export type PerceptionEventSource = (typeof perceptionEventSources)[number];
 export type OwnershipReasonCode = (typeof ownershipReasonCodes)[number];
 export type Emotion = (typeof emotions)[number];
 export type PhysicalStatus = (typeof physicalStatuses)[number];
@@ -190,22 +178,6 @@ export interface BaseEvent<TType extends EventType, TPayload> {
   source: EventSource;
   correlationId?: string;
   payload: TPayload;
-}
-
-export interface LegacyPerceptionEvent {
-  id?: string;
-  type: PerceptionEventType;
-  source?: PerceptionEventSource;
-  at?: string;
-  payload?: Record<string, unknown>;
-}
-
-export interface NormalizedPerceptionEvent {
-  id: string;
-  type: PerceptionEventType;
-  source: PerceptionEventSource;
-  at: string;
-  payload: Record<string, unknown>;
 }
 
 export interface AliaState {
@@ -370,7 +342,6 @@ export type IdleMotionPayload = TargetedExpressionPayload & {
 };
 
 export type PerceptionEvent =
-  | LegacyPerceptionEvent
   | BaseEvent<"presence.detected", PresencePayload>
   | BaseEvent<"presence.left", PresencePayload>
   | BaseEvent<"presence.lost", PresencePayload>
@@ -507,10 +478,6 @@ export function assertAliaEvent(value: unknown): asserts value is AliaEvent {
 
 export function isPerceptionEventType(value: string): value is PerceptionEventType {
   return perceptionEventTypes.includes(value as PerceptionEventType);
-}
-
-export function isPerceptionEventSource(value: string): value is PerceptionEventSource {
-  return perceptionEventSources.includes(value as PerceptionEventSource);
 }
 
 export function isPhysicalAction(value: string): value is PhysicalAction {
