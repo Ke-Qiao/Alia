@@ -24,6 +24,12 @@ Every event uses the same envelope:
 }
 ```
 
+The exported `AliaEvent` TypeScript union and `validateAliaEvent` runtime
+validator both represent this envelope only. Local development shortcuts, such
+as server-only inputs shaped like `{ type, at, source, payload }`, may be
+normalized by `apps/server`, but they are not part of the shared protocol and
+must not be treated as valid `AliaEvent` values.
+
 Body targets are:
 
 - `physical`
@@ -93,6 +99,10 @@ structured `reason`. If both bodies request ownership, the event can include a
 
 These are intents, not renderer commands. The server decides ownership and
 targets; body runtimes render or simulate the assigned mode.
+
+`expression.enter_sleep_pose` carries only the abstract protocol pose
+`fixed_safe_sleep`. Servo angles, GPIO details, and mock actuator constants are
+runtime-local implementation details, not shared protocol fields.
 
 ## v0.1 Example Event Flow
 
@@ -166,6 +176,82 @@ explicit:
 
 When the Web Avatar becomes active, the inactive physical bust should receive
 `expression.enter_sleep_pose` with `pose: "fixed_safe_sleep"`.
+
+```json
+{
+  "id": "evt-expression-3",
+  "type": "expression.enter_sleep_pose",
+  "occurredAt": "2026-06-28T12:00:02.000Z",
+  "source": { "kind": "brain" },
+  "correlationId": "evt-ownership-2",
+  "payload": {
+    "target": "physical",
+    "pose": "fixed_safe_sleep",
+    "reason": "Physical bust sleeps while Web Avatar is active."
+  }
+}
+```
+
+When physical is unavailable and both bodies request active ownership, Web is
+the fallback. The conflict is represented as an availability resolution, not as
+physical priority:
+
+```json
+{
+  "id": "evt-ownership-2",
+  "type": "embodiment.active_body.changed",
+  "occurredAt": "2026-06-28T12:05:00.000Z",
+  "source": { "kind": "brain" },
+  "payload": {
+    "previous": "none",
+    "next": "web",
+    "reason": {
+      "code": "physical_unavailable",
+      "detail": "Physical bust is unavailable, so Web acquired fallback ownership."
+    },
+    "conflict": {
+      "requested": ["physical", "web"],
+      "resolvedTo": "web",
+      "rule": "availability"
+    }
+  }
+}
+```
+
+The paired explainability event uses the same envelope:
+
+```json
+{
+  "id": "evt-decision-1",
+  "type": "brain.decision.logged",
+  "occurredAt": "2026-06-28T12:05:00.010Z",
+  "source": { "kind": "brain" },
+  "correlationId": "evt-ownership-2",
+  "payload": {
+    "decisionId": "decision-1",
+    "reason": "physical_unavailable_web_fallback_acquired",
+    "activeBody": "web",
+    "target": "web",
+    "sourceEventId": "evt-ownership-2"
+  }
+}
+```
+
+Physical availability events are also envelope events:
+
+```json
+{
+  "id": "evt-physical-unavailable-1",
+  "type": "physical.bust.unavailable",
+  "occurredAt": "2026-06-28T12:04:59.000Z",
+  "source": { "kind": "physical", "id": "physical-bust-mock" },
+  "payload": {
+    "status": "unavailable",
+    "isMock": true,
+    "detail": "Physical bust mock is unavailable."
+  }
+}
+```
 
 ## Mock Sensor Event Sequence
 

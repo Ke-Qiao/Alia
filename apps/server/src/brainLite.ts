@@ -8,13 +8,31 @@ import type {
   Emotion,
   ExpressionIntent,
   ExpressionIntentKind,
-  NormalizedPerceptionEvent,
-  PerceptionEvent,
-  PerceptionEventSource,
+  PerceptionEventType,
 } from "@alia/protocol";
 
 const DEFAULT_GREETING_COOLDOWN_MS = 60_000;
 const GREETING_TEXT = "Hi, I'm here with you.";
+const internalServerEventSources = ["brain", "mock", "script", "web", "physical"] as const;
+
+export type InternalServerEventSource = (typeof internalServerEventSources)[number];
+
+export interface InternalServerInputEvent {
+  id?: string;
+  type: PerceptionEventType;
+  source?: InternalServerEventSource | { kind: string; id?: string };
+  at?: string;
+  occurredAt?: string;
+  payload?: Record<string, unknown>;
+}
+
+export interface NormalizedBrainLiteEvent {
+  id: string;
+  type: PerceptionEventType;
+  source: InternalServerEventSource;
+  at: string;
+  payload: Record<string, unknown>;
+}
 
 export interface BrainLiteOptions {
   greetingCooldownMs?: number;
@@ -22,7 +40,7 @@ export interface BrainLiteOptions {
 }
 
 export interface BrainLiteResult {
-  event: NormalizedPerceptionEvent;
+  event: NormalizedBrainLiteEvent;
   state: AliaState;
   intents: ExpressionIntent[];
   logs: DecisionLogEntry[];
@@ -68,7 +86,7 @@ export class BrainLite {
     }));
   }
 
-  handleEvent(input: PerceptionEvent): BrainLiteResult {
+  handleEvent(input: InternalServerInputEvent): BrainLiteResult {
     const event = this.normalizeEvent(input);
     const intents: ExpressionIntent[] = [];
     const logs: DecisionLogEntry[] = [];
@@ -117,7 +135,7 @@ export class BrainLite {
   }
 
   private handlePresenceDetected(
-    event: NormalizedPerceptionEvent,
+    event: NormalizedBrainLiteEvent,
     intents: ExpressionIntent[],
     logs: DecisionLogEntry[],
   ): void {
@@ -207,7 +225,7 @@ export class BrainLite {
   }
 
   private handlePresenceLeft(
-    event: NormalizedPerceptionEvent,
+    event: NormalizedBrainLiteEvent,
     logs: DecisionLogEntry[],
   ): void {
     const stateBefore = cloneState(this.state);
@@ -227,7 +245,7 @@ export class BrainLite {
   }
 
   private handleMockSensorEvent(
-    event: NormalizedPerceptionEvent,
+    event: NormalizedBrainLiteEvent,
     intents: ExpressionIntent[],
     logs: DecisionLogEntry[],
   ): void {
@@ -250,7 +268,7 @@ export class BrainLite {
   }
 
   private handlePhysicalAvailability(
-    event: NormalizedPerceptionEvent,
+    event: NormalizedBrainLiteEvent,
     logs: DecisionLogEntry[],
   ): void {
     const availability = getPhysicalAvailability(event);
@@ -294,7 +312,7 @@ export class BrainLite {
 
   private requestActiveBody(
     body: Body,
-    event: NormalizedPerceptionEvent,
+    event: NormalizedBrainLiteEvent,
     intents: ExpressionIntent[],
     logs: DecisionLogEntry[],
   ): void {
@@ -351,7 +369,7 @@ export class BrainLite {
   }
 
   private resolveActiveBodyConflict(
-    event: NormalizedPerceptionEvent,
+    event: NormalizedBrainLiteEvent,
     intents: ExpressionIntent[],
     logs: DecisionLogEntry[],
   ): void {
@@ -377,7 +395,7 @@ export class BrainLite {
 
   private forceAcquireBody(
     body: Body,
-    event: NormalizedPerceptionEvent,
+    event: NormalizedBrainLiteEvent,
     intents: ExpressionIntent[],
     logs: DecisionLogEntry[],
     reason: string,
@@ -428,7 +446,7 @@ export class BrainLite {
 
   private confirmActiveBody(
     body: Body,
-    event: NormalizedPerceptionEvent,
+    event: NormalizedBrainLiteEvent,
     intents: ExpressionIntent[],
     logs: DecisionLogEntry[],
   ): void {
@@ -459,7 +477,7 @@ export class BrainLite {
 
   private rejectActiveBodyRequest(
     requestedBody: Body,
-    event: NormalizedPerceptionEvent,
+    event: NormalizedBrainLiteEvent,
     intents: ExpressionIntent[],
     logs: DecisionLogEntry[],
     reason: string,
@@ -495,7 +513,7 @@ export class BrainLite {
 
   private createInactiveBodyIntent(
     activeBody: Body,
-    event: NormalizedPerceptionEvent,
+    event: NormalizedBrainLiteEvent,
     reason: string,
   ): ExpressionIntent {
     return activeBody === "web"
@@ -521,7 +539,7 @@ export class BrainLite {
 
   private releaseBody(
     body: Body,
-    event: NormalizedPerceptionEvent,
+    event: NormalizedBrainLiteEvent,
     logs: DecisionLogEntry[],
   ): void {
     const stateBefore = cloneState(this.state);
@@ -555,7 +573,7 @@ export class BrainLite {
   }
 
   private logNoop(
-    event: NormalizedPerceptionEvent,
+    event: NormalizedBrainLiteEvent,
     logs: DecisionLogEntry[],
     reason: string,
   ): void {
@@ -571,7 +589,7 @@ export class BrainLite {
   }
 
   private createIntent(input: {
-    event: NormalizedPerceptionEvent;
+    event: NormalizedBrainLiteEvent;
     target: Body;
     kind: ExpressionIntentKind;
     mode: CurrentMode;
@@ -594,7 +612,7 @@ export class BrainLite {
   }
 
   private addDecisionLog(input: {
-    event: NormalizedPerceptionEvent;
+    event: NormalizedBrainLiteEvent;
     logs: DecisionLogEntry[];
     decision: DecisionKind;
     accepted: boolean;
@@ -620,7 +638,7 @@ export class BrainLite {
     input.logs.push(entry);
   }
 
-  private normalizeEvent(input: PerceptionEvent): NormalizedPerceptionEvent {
+  private normalizeEvent(input: InternalServerInputEvent): NormalizedBrainLiteEvent {
     const at = readEventAt(input) ?? this.now().toISOString();
     if (Number.isNaN(Date.parse(at))) {
       throw new Error("Perception event at must be a valid ISO timestamp.");
@@ -651,7 +669,7 @@ function cloneState(state: AliaState): AliaState {
   };
 }
 
-function readEventAt(input: PerceptionEvent): string | undefined {
+function readEventAt(input: InternalServerInputEvent): string | undefined {
   if ("at" in input && typeof input.at === "string") {
     return input.at;
   }
@@ -663,19 +681,18 @@ function readEventAt(input: PerceptionEvent): string | undefined {
   return undefined;
 }
 
-function readEventSource(input: PerceptionEvent): PerceptionEventSource {
+function readEventSource(input: InternalServerInputEvent): InternalServerEventSource {
   const source = input.source;
 
-  if (
-    source === "mock" ||
-    source === "script" ||
-    source === "web" ||
-    source === "physical"
-  ) {
+  if (typeof source === "string" && isInternalServerEventSource(source)) {
     return source;
   }
 
   if (source && typeof source === "object" && "kind" in source) {
+    if (source.kind === "brain") {
+      return "brain";
+    }
+
     if (source.kind === "web") {
       return "web";
     }
@@ -692,7 +709,7 @@ function readEventSource(input: PerceptionEvent): PerceptionEventSource {
   return "mock";
 }
 
-function readEventPayload(input: PerceptionEvent): Record<string, unknown> {
+function readEventPayload(input: InternalServerInputEvent): Record<string, unknown> {
   return input.payload && typeof input.payload === "object" && !Array.isArray(input.payload)
     ? { ...(input.payload as Record<string, unknown>) }
     : {};
@@ -702,8 +719,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+export function isInternalServerEventSource(value: string): value is InternalServerEventSource {
+  return internalServerEventSources.includes(value as InternalServerEventSource);
+}
+
 function getPhysicalAvailability(
-  event: NormalizedPerceptionEvent,
+  event: NormalizedBrainLiteEvent,
 ): "available" | "unavailable" | "unknown" {
   if (event.type === "physical.bust.available") {
     return "available";
@@ -718,7 +739,7 @@ function getPhysicalAvailability(
     : "unknown";
 }
 
-function hasActiveBodyConflict(event: NormalizedPerceptionEvent): boolean {
+function hasActiveBodyConflict(event: NormalizedBrainLiteEvent): boolean {
   return conflictCandidates(event).some((candidate) => {
     const requestedBodies = readRequestedBodies(candidate);
     if (requestedBodies.includes("physical") && requestedBodies.includes("web")) {
@@ -734,7 +755,7 @@ function hasActiveBodyConflict(event: NormalizedPerceptionEvent): boolean {
 }
 
 function conflictCandidates(
-  event: NormalizedPerceptionEvent,
+  event: NormalizedBrainLiteEvent,
 ): Record<string, unknown>[] {
   const candidates = [event.payload];
 
@@ -762,7 +783,7 @@ function readRequestedBodies(candidate: Record<string, unknown>): string[] {
 
 function getOwnershipReason(
   body: Body,
-  eventType: NormalizedPerceptionEvent["type"],
+  eventType: NormalizedBrainLiteEvent["type"],
   physicalAvailable: boolean,
 ): string {
   if (body === "web") {
@@ -781,7 +802,7 @@ function getOwnershipReason(
 }
 
 function getPhysicalUnavailableRejectionReason(
-  eventType: NormalizedPerceptionEvent["type"],
+  eventType: NormalizedBrainLiteEvent["type"],
 ): string {
   if (eventType === "presence.detected") {
     return "physical_unavailable_presence_rejected";

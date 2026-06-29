@@ -1,14 +1,18 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import type {
-  ActiveBody,
   AliaState,
-  BodyMode,
   DecisionLogEntry,
   Emotion,
   ExpressionIntent,
   StreamEventType,
 } from "@alia/protocol";
+import {
+  WEB_AVATAR_RELEASE_PATH,
+  WEB_AVATAR_REQUEST_ACTIVE_PATH,
+  getDeveloperPanelModel,
+  getWebBodyMode,
+} from "./avatarModel.ts";
 
 const brainLiteUrl = (
   import.meta.env.VITE_BRAIN_LITE_URL ?? "http://127.0.0.1:3000"
@@ -54,9 +58,9 @@ export function App() {
   });
 
   const webMode = useMemo(() => getWebBodyMode(state), [state]);
-  const physicalMode = useMemo(
-    () => getPhysicalBodyMode(state.activeBody),
-    [state.activeBody],
+  const developerPanel = useMemo(
+    () => getDeveloperPanelModel(state, lastDecisionLog, latestExpressionIntent),
+    [state, lastDecisionLog, latestExpressionIntent],
   );
 
   useEffect(() => {
@@ -107,11 +111,11 @@ export function App() {
   }, []);
 
   async function requestWebActivation(): Promise<void> {
-    await postBrainLiteCommand("/api/v0/web-avatar/request-active");
+    await postBrainLiteCommand(WEB_AVATAR_REQUEST_ACTIVE_PATH);
   }
 
   async function releaseWebActivation(): Promise<void> {
-    await postBrainLiteCommand("/api/v0/web-avatar/release");
+    await postBrainLiteCommand(WEB_AVATAR_RELEASE_PATH);
   }
 
   async function postBrainLiteCommand(path: string): Promise<void> {
@@ -196,19 +200,23 @@ export function App() {
         <dl className="state-grid">
           <div>
             <dt>activeBody</dt>
-            <dd>{state.activeBody}</dd>
+            <dd>{developerPanel.activeBody}</dd>
           </div>
           <div>
             <dt>currentMode</dt>
-            <dd>{webMode}</dd>
+            <dd>{developerPanel.currentMode}</dd>
+          </div>
+          <div>
+            <dt>webMode</dt>
+            <dd>{developerPanel.webMode}</dd>
           </div>
           <div>
             <dt>currentEmotion</dt>
-            <dd>{state.currentEmotion}</dd>
+            <dd>{developerPanel.currentEmotion}</dd>
           </div>
           <div>
             <dt>physicalMode</dt>
-            <dd>{physicalMode}</dd>
+            <dd>{developerPanel.physicalMode}</dd>
           </div>
         </dl>
 
@@ -235,27 +243,28 @@ export function App() {
         ) : null}
 
         <PanelBlock title="last decision log">
-          {lastDecisionLog === null ? (
+          {developerPanel.lastDecisionLog === null ? (
             <p className="muted">none</p>
           ) : (
             <div className="event-card">
-              <strong>{lastDecisionLog.decision}</strong>
-              <span>{lastDecisionLog.reason}</span>
-              <small>{lastDecisionLog.eventType}</small>
+              <strong>{developerPanel.lastDecisionLog.decision}</strong>
+              <span>{developerPanel.lastDecisionLog.reason}</span>
+              <small>{developerPanel.lastDecisionLog.eventType}</small>
             </div>
           )}
         </PanelBlock>
 
         <PanelBlock title="latest expression intent">
-          {latestExpressionIntent === null ? (
+          {developerPanel.latestExpressionIntent === null ? (
             <p className="muted">none</p>
           ) : (
             <div className="event-card">
               <strong>
-                {latestExpressionIntent.target} / {latestExpressionIntent.kind}
+                {developerPanel.latestExpressionIntent.target} /{" "}
+                {developerPanel.latestExpressionIntent.kind}
               </strong>
-              <span>{latestExpressionIntent.abstractPose}</span>
-              <small>{latestExpressionIntent.emotion}</small>
+              <span>{developerPanel.latestExpressionIntent.abstractPose}</span>
+              <small>{developerPanel.latestExpressionIntent.emotion}</small>
             </div>
           )}
         </PanelBlock>
@@ -281,38 +290,6 @@ function parseStreamEvent<TData>(event: Event): StreamEvent<TData> | null {
   } catch {
     return null;
   }
-}
-
-function getWebBodyMode(state: AliaState): BodyMode {
-  if (state.activeBody === "physical") {
-    return "rest";
-  }
-
-  if (state.activeBody === "web") {
-    return "active";
-  }
-
-  if (state.currentMode === "sleeping") {
-    return "sleep";
-  }
-
-  if (state.currentMode === "resting") {
-    return "rest";
-  }
-
-  return "idle";
-}
-
-function getPhysicalBodyMode(activeBody: ActiveBody): BodyMode {
-  if (activeBody === "web") {
-    return "sleep";
-  }
-
-  if (activeBody === "physical") {
-    return "active";
-  }
-
-  return "idle";
 }
 
 function mouthFor(emotion: Emotion): "smile" | "soft" | "flat" {

@@ -19,6 +19,8 @@ The CLI emits these v0.1 mock events:
 - `presence.detected`
 - `presence.lost`
 - `mock.sensor.event`
+- `physical.bust.available`
+- `physical.bust.unavailable`
 
 By default events are posted to:
 
@@ -36,12 +38,28 @@ Useful scripts:
 pnpm --filter @alia/embedded-mock mock:presence
 pnpm --filter @alia/embedded-mock mock:presence-lost
 pnpm --filter @alia/embedded-mock mock:event -- --payload '{"name":"manual_button"}'
+pnpm --filter @alia/embedded-mock mock:physical-available
+pnpm --filter @alia/embedded-mock mock:physical-unavailable
 pnpm --filter @alia/embedded-mock mock:web-active-conflict-test
 ```
 
 `mock:web-active-conflict-test` posts a `web.session.started` event to the same
 Brain-lite mock event endpoint so the current server can assign Web Avatar as
 active and return the physical `body.sleep` intent.
+
+`mock:physical-available` and `mock:physical-unavailable` emit shared protocol
+envelope events with `type` set to `physical.bust.available` or
+`physical.bust.unavailable`. Their payload includes `status`, `isMock: true`,
+and an optional `detail` string. These commands are mock-only availability
+reports for Brain-lite ownership policy; they do not probe real hardware.
+
+Dry-run mode logs the generated event without requiring a running Brain-lite
+server:
+
+```bash
+pnpm --filter @alia/embedded-mock mock:physical-available -- --dry-run
+pnpm --filter @alia/embedded-mock mock:physical-unavailable -- --dry-run
+```
 
 ## Receiving Brain-lite Dispatch
 
@@ -98,10 +116,11 @@ The physical sleep pose is represented conceptually as:
 }
 ```
 
-These angles are placeholders for protocol and UI integration only. They are not
-calibration values and must not be connected to real servo control without a
-future safety decision that documents limits, timeouts, calibration, and an
-emergency stop path.
+These angles are embedded-mock runtime placeholders only. The shared protocol
+uses the abstract `fixed_safe_sleep` pose and does not expose servo angles.
+These values are not calibration values and must not be connected to real servo
+control without a future safety decision that documents limits, timeouts,
+calibration, and an emergency stop path.
 
 ## Future Real Hardware Mapping
 
@@ -117,6 +136,12 @@ The mock action boundary is intended to map to future hardware services:
 Future hardware code should replace only the action implementation layer. Sensor
 event names, expression intent handling, and Active Body Ownership behavior
 should remain shared protocol concepts.
+
+The physical availability commands are the mock-first shape for future hardware
+availability reporting. A future real hardware bridge may report equivalent
+`physical.bust.available` and `physical.bust.unavailable` protocol events after
+checking actual device state, but this v0.1 runtime only emits scripted mock
+availability events.
 
 ## Explicit Non-goals
 

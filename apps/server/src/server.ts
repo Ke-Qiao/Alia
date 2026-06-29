@@ -2,14 +2,17 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import { pathToFileURL } from "node:url";
 import {
   BRAIN_LITE_ENDPOINTS,
-  isPerceptionEventSource,
   isPerceptionEventType,
-  type PerceptionEvent,
-  type PerceptionEventSource,
   type StreamEventType,
 } from "@alia/protocol";
 
-import { BrainLite, type BrainLiteResult } from "./brainLite.ts";
+import {
+  BrainLite,
+  isInternalServerEventSource,
+  type BrainLiteResult,
+  type InternalServerEventSource,
+  type InternalServerInputEvent,
+} from "./brainLite.ts";
 
 const DEFAULT_PORT = 3000;
 const MAX_BODY_BYTES = 1_000_000;
@@ -193,7 +196,7 @@ export function createBrainLiteHttpServer(brain = new BrainLite()) {
   };
 }
 
-function buildPresenceEvent(body: unknown, url: URL): PerceptionEvent {
+function buildPresenceEvent(body: unknown, url: URL): InternalServerInputEvent {
   const source = getSourceFromUnknown(body) ?? getSourceFromUrl(url) ?? "script";
   const payload = getPayloadFromUnknown(body);
 
@@ -204,7 +207,7 @@ function buildPresenceEvent(body: unknown, url: URL): PerceptionEvent {
   };
 }
 
-function parsePerceptionEvent(body: unknown): PerceptionEvent {
+function parsePerceptionEvent(body: unknown): InternalServerInputEvent {
   if (!isObject(body)) {
     throw new RequestError(400, "Request body must be a JSON object.");
   }
@@ -235,8 +238,8 @@ function parsePerceptionEvent(body: unknown): PerceptionEvent {
   };
 }
 
-function readPerceptionSource(source: unknown): PerceptionEventSource {
-  if (typeof source === "string" && isPerceptionEventSource(source)) {
+function readPerceptionSource(source: unknown): InternalServerEventSource {
+  if (typeof source === "string" && isInternalServerEventSource(source)) {
     return source;
   }
 
@@ -258,17 +261,17 @@ function readPerceptionSource(source: unknown): PerceptionEventSource {
   }
 }
 
-function getSourceFromUnknown(body: unknown): PerceptionEventSource | null {
+function getSourceFromUnknown(body: unknown): InternalServerEventSource | null {
   if (!isObject(body) || typeof body.source !== "string") {
     return null;
   }
 
-  return isPerceptionEventSource(body.source) ? body.source : null;
+  return isInternalServerEventSource(body.source) ? body.source : null;
 }
 
-function getSourceFromUrl(url: URL): PerceptionEventSource | null {
+function getSourceFromUrl(url: URL): InternalServerEventSource | null {
   const value = url.searchParams.get("source");
-  return value !== null && isPerceptionEventSource(value) ? value : null;
+  return value !== null && isInternalServerEventSource(value) ? value : null;
 }
 
 function getPayloadFromUnknown(body: unknown): Record<string, unknown> {

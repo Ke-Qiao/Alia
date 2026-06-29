@@ -13,6 +13,8 @@
     "mock:presence": "node src/index.ts presence",
     "mock:presence-lost": "node src/index.ts presence-lost",
     "mock:event": "node src/index.ts mock-event",
+    "mock:physical-available": "node src/index.ts physical-available",
+    "mock:physical-unavailable": "node src/index.ts physical-unavailable",
     "mock:web-active-conflict-test": "node src/index.ts web-active-conflict-test",
     "lint": "pnpm exec tsc -p tsconfig.json --noEmit",
     "typecheck": "pnpm exec tsc -p tsconfig.json --noEmit",
