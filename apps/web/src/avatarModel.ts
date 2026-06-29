@@ -3,6 +3,7 @@ import {
   type AliaState,
   type BodyMode,
   type DecisionLogEntry,
+  type Emotion,
   type ExpressionIntent,
 } from "@alia/protocol";
 
@@ -16,6 +17,7 @@ export interface DeveloperPanelModel {
   currentEmotion: AliaState["currentEmotion"];
   webMode: BodyMode;
   physicalMode: BodyMode;
+  physicalAvailable: boolean | null;
   lastDecisionLog: DecisionLogEntry | null;
   latestExpressionIntent: ExpressionIntent | null;
 }
@@ -68,9 +70,42 @@ export function getDeveloperPanelModel(
     currentEmotion: state.currentEmotion,
     webMode: getWebBodyMode(state),
     physicalMode: getPhysicalBodyMode(state),
+    physicalAvailable: getPhysicalAvailabilityFromDecisionLog(lastDecisionLog),
     lastDecisionLog,
     latestExpressionIntent,
   };
+}
+
+export function getPhysicalAvailabilityFromDecisionLog(
+  decisionLog: DecisionLogEntry | null,
+): boolean | null {
+  const physicalAvailable = decisionLog?.metadata?.physicalAvailable;
+
+  return typeof physicalAvailable === "boolean" ? physicalAvailable : null;
+}
+
+export function getAvatarSubtitleText(
+  latestExpressionIntent: ExpressionIntent | null,
+): string {
+  const explicitText = latestExpressionIntent?.text?.trim();
+
+  if (explicitText) {
+    return explicitText;
+  }
+
+  if (latestExpressionIntent === null) {
+    return "Quiet presence.";
+  }
+
+  if (latestExpressionIntent.kind === "greeting") {
+    return "I noticed you nearby.";
+  }
+
+  if (latestExpressionIntent.target === "web") {
+    return "Resting while the physical body owns presence.";
+  }
+
+  return "Physical bust is held in safe sleep pose.";
 }
 
 export function getWebActivationFeedback(
@@ -93,4 +128,18 @@ export function getWebActivationFeedback(
   }
 
   return "Web activation request accepted, but ownership was not granted.";
+}
+
+export function getPlaceholderMouthForEmotion(
+  emotion: Emotion,
+): "smile" | "soft" | "flat" {
+  if (emotion === "happy" || emotion === "curious") {
+    return "smile";
+  }
+
+  if (emotion === "sleepy" || emotion === "neutral") {
+    return "soft";
+  }
+
+  return "flat";
 }

@@ -1,38 +1,65 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type {
   AliaState,
   DecisionLogEntry,
-  Emotion,
   ExpressionIntent,
-  StreamEventType,
 } from "@alia/protocol";
+import { getAvatarAssetStatus } from "./avatarAssets.ts";
 import {
   WEB_AVATAR_RELEASE_PATH,
   WEB_AVATAR_REQUEST_ACTIVE_PATH,
+  getAvatarSubtitleText,
   getDeveloperPanelModel,
   getWebActivationFeedback,
   getWebBodyMode,
 } from "./avatarModel.ts";
+import {
+  type BrainLiteResultPayload,
+  type CommandState,
+  type ConnectionState,
+  parseStreamEvent,
+} from "./brainLiteClient.ts";
+import { AvatarView } from "./components/AvatarView.tsx";
+import { DebugPanel } from "./components/DebugPanel.tsx";
+import { SettingsPanel } from "./components/SettingsPanel.tsx";
+
+type AppSection = "avatar" | "debug" | "settings";
+
+const navigationItems: { id: AppSection; label: string; description: string }[] = [
+  {
+    id: "avatar",
+    label: "Avatar",
+    description: "Digital body",
+  },
+  {
+    id: "debug",
+    label: "Debug",
+    description: "Brain-lite state",
+  },
+  {
+    id: "settings",
+    label: "Settings",
+    description: "Runtime status",
+  },
+];
+
+const futureNavigationItems = [
+  {
+    label: "Voice",
+    description: "future",
+  },
+  {
+    label: "Memory",
+    description: "future",
+  },
+];
 
 const brainLiteUrl = (
   import.meta.env.VITE_BRAIN_LITE_URL ?? "http://127.0.0.1:3000"
 ).replace(/\/$/, "");
 
-type ConnectionState = "connecting" | "connected" | "offline";
-
-interface StreamEvent<TData> {
-  id: string;
-  type: StreamEventType;
-  at: string;
-  data: TData;
-}
-
-interface BrainLiteResultPayload {
-  state: AliaState;
-  intents: ExpressionIntent[];
-  logs: DecisionLogEntry[];
-}
+const configuredAvatarModelUrl = import.meta.env.VITE_AVATAR_MODEL_URL;
 
 const initialState: AliaState = {
   activeBody: "none",
@@ -43,6 +70,7 @@ const initialState: AliaState = {
 };
 
 export function App() {
+  const [activeSection, setActiveSection] = useState<AppSection>("avatar");
   const [state, setState] = useState<AliaState>(initialState);
   const [connectionState, setConnectionState] =
     useState<ConnectionState>("connecting");
@@ -50,10 +78,7 @@ export function App() {
     useState<DecisionLogEntry | null>(null);
   const [latestExpressionIntent, setLatestExpressionIntent] =
     useState<ExpressionIntent | null>(null);
-  const [commandState, setCommandState] = useState<{
-    pending: boolean;
-    message: string | null;
-  }>({
+  const [commandState, setCommandState] = useState<CommandState>({
     pending: false,
     message: null,
   });
@@ -62,6 +87,17 @@ export function App() {
   const developerPanel = useMemo(
     () => getDeveloperPanelModel(state, lastDecisionLog, latestExpressionIntent),
     [state, lastDecisionLog, latestExpressionIntent],
+  );
+  const avatarAssetStatus = useMemo(
+    () => getAvatarAssetStatus(configuredAvatarModelUrl, "failed"),
+    [],
+  );
+  const avatarSubtitleText = useMemo(
+    () => getAvatarSubtitleText(latestExpressionIntent),
+    [latestExpressionIntent],
+  );
+  const activeNavigationItem = navigationItems.find(
+    (item) => item.id === activeSection,
   );
 
   useEffect(() => {
@@ -160,156 +196,96 @@ export function App() {
   }
 
   return (
-    <main className={`avatar-shell mode-${webMode}`}>
-      <section className="avatar-stage" aria-label="Alia Web Avatar body">
-        <div className="connection-strip">
-          <span className={`status-dot status-${connectionState}`} />
-          <span>{connectionState}</span>
+    <div className={`app-shell mode-${webMode}`}>
+      <aside className="app-sidebar" aria-label="Primary navigation">
+        <div className="brand-lockup">
+          <span className="brand-mark" aria-hidden="true">
+            A
+          </span>
+          <div>
+            <strong>Alia</strong>
+            <span>Web Body</span>
+          </div>
         </div>
 
-        <div
-          className={`avatar avatar-${webMode} emotion-${state.currentEmotion}`}
-        >
-          <div className="presence-ring" />
-          <div className="body-shadow" />
-          <div className="torso">
-            <div className="torso-core" />
-            <div className="shoulder shoulder-left" />
-            <div className="shoulder shoulder-right" />
-          </div>
-          <div className="neck" />
-          <div className="head-wrap">
-            <div className="head">
-              <div className="hair-cap" />
-              <div className="face">
-                <div className="eye eye-left">
-                  <span className="lid" />
-                  <span className="pupil" />
-                </div>
-                <div className="eye eye-right">
-                  <span className="lid" />
-                  <span className="pupil" />
-                </div>
-                <div className="nose" />
-                <div className={`mouth mouth-${mouthFor(state.currentEmotion)}`} />
-              </div>
-            </div>
-          </div>
-          <div className="expression-tag">
-            <span>{state.currentEmotion}</span>
-          </div>
-        </div>
-      </section>
+        <nav className="sidebar-nav" aria-label="Web app sections">
+          {navigationItems.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              className="nav-item"
+              aria-current={item.id === activeSection ? "page" : undefined}
+              onClick={() => setActiveSection(item.id)}
+            >
+              <span>{item.label}</span>
+              <small>{item.description}</small>
+            </button>
+          ))}
 
-      <aside className="developer-panel" aria-label="Developer panel">
-        <div className="panel-header">
-          <h1>Alia Web Avatar</h1>
-          <p>Brain-lite digital body shell</p>
-        </div>
+          {futureNavigationItems.map((item) => (
+            <button
+              key={item.label}
+              type="button"
+              className="nav-item nav-item-disabled"
+              disabled
+            >
+              <span>{item.label}</span>
+              <small>{item.description}</small>
+            </button>
+          ))}
+        </nav>
 
-        <dl className="state-grid">
-          <div>
-            <dt>activeBody</dt>
-            <dd>{developerPanel.activeBody}</dd>
-          </div>
-          <div>
-            <dt>currentMode</dt>
-            <dd>{developerPanel.currentMode}</dd>
-          </div>
-          <div>
-            <dt>webMode</dt>
-            <dd>{developerPanel.webMode}</dd>
-          </div>
-          <div>
-            <dt>currentEmotion</dt>
-            <dd>{developerPanel.currentEmotion}</dd>
-          </div>
-          <div>
-            <dt>physicalMode</dt>
-            <dd>{developerPanel.physicalMode}</dd>
-          </div>
-        </dl>
-
-        <div className="panel-actions">
-          <button
-            type="button"
-            onClick={() => void requestWebActivation()}
-            disabled={commandState.pending}
-          >
-            Request Web body activation
-          </button>
-          <button
-            type="button"
-            className="secondary"
-            onClick={() => void releaseWebActivation()}
-            disabled={commandState.pending}
-          >
-            Release Web body activation
-          </button>
-        </div>
-
-        {commandState.message !== null ? (
-          <p className="command-message">{commandState.message}</p>
-        ) : null}
-
-        <PanelBlock title="last decision log">
-          {developerPanel.lastDecisionLog === null ? (
-            <p className="muted">none</p>
-          ) : (
-            <div className="event-card">
-              <strong>{developerPanel.lastDecisionLog.decision}</strong>
-              <span>{developerPanel.lastDecisionLog.reason}</span>
-              <small>{developerPanel.lastDecisionLog.eventType}</small>
-            </div>
-          )}
-        </PanelBlock>
-
-        <PanelBlock title="latest expression intent">
-          {developerPanel.latestExpressionIntent === null ? (
-            <p className="muted">none</p>
-          ) : (
-            <div className="event-card">
-              <strong>
-                {developerPanel.latestExpressionIntent.target} /{" "}
-                {developerPanel.latestExpressionIntent.kind}
-              </strong>
-              <span>{developerPanel.latestExpressionIntent.abstractPose}</span>
-              <small>{developerPanel.latestExpressionIntent.emotion}</small>
-            </div>
-          )}
-        </PanelBlock>
+        <div className="sidebar-note">v0.2 shell / mock-first runtime</div>
       </aside>
-    </main>
+
+      <div className="app-workspace">
+        <header className="top-bar">
+          <div>
+            <p>{activeNavigationItem?.description ?? "Web Avatar"}</p>
+            <h1>{activeNavigationItem?.label ?? "Avatar"}</h1>
+          </div>
+
+          <div className="top-status-cluster" aria-label="Current status">
+            <span className="top-status-chip">
+              <span className={`status-dot status-${connectionState}`} />
+              {connectionState}
+            </span>
+            <span className="top-status-chip">activeBody: {state.activeBody}</span>
+            <span className="top-status-chip">webMode: {webMode}</span>
+          </div>
+        </header>
+
+        <main className="app-content">
+          {activeSection === "avatar" ? (
+            <AvatarView
+              state={state}
+              webMode={webMode}
+              connectionState={connectionState}
+              commandPending={commandState.pending}
+              commandMessage={commandState.message}
+              subtitleText={avatarSubtitleText}
+            />
+          ) : null}
+
+          {activeSection === "debug" ? (
+            <DebugPanel
+              developerPanel={developerPanel}
+              commandPending={commandState.pending}
+              commandMessage={commandState.message}
+              onRequestWebActivation={() => void requestWebActivation()}
+              onReleaseWebActivation={() => void releaseWebActivation()}
+            />
+          ) : null}
+
+          {activeSection === "settings" ? (
+            <SettingsPanel
+              avatarAssetStatus={avatarAssetStatus}
+              brainLiteUrl={brainLiteUrl}
+              connectionState={connectionState}
+            />
+          ) : null}
+        </main>
+      </div>
+    </div>
   );
-}
-
-function PanelBlock(props: { title: string; children: ReactNode }) {
-  return (
-    <section className="panel-block">
-      <h2>{props.title}</h2>
-      {props.children}
-    </section>
-  );
-}
-
-function parseStreamEvent<TData>(event: Event): StreamEvent<TData> | null {
-  const messageEvent = event as MessageEvent<string>;
-
-  try {
-    return JSON.parse(messageEvent.data) as StreamEvent<TData>;
-  } catch {
-    return null;
-  }
-}
-
-function mouthFor(emotion: Emotion): "smile" | "soft" | "flat" {
-  if (emotion === "happy" || emotion === "curious") {
-    return "smile";
-  }
-
-  if (emotion === "sleepy" || emotion === "neutral") {
-    return "soft";
-  }
-
-  return "flat";
 }

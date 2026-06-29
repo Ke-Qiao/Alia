@@ -7,8 +7,11 @@ import { BRAIN_LITE_ENDPOINTS } from "@alia/protocol";
 import {
   WEB_AVATAR_RELEASE_PATH,
   WEB_AVATAR_REQUEST_ACTIVE_PATH,
+  getAvatarSubtitleText,
   getDeveloperPanelModel,
   getPhysicalBodyMode,
+  getPhysicalAvailabilityFromDecisionLog,
+  getPlaceholderMouthForEmotion,
   getWebActivationFeedback,
   getWebBodyMode,
 } from "../src/avatarModel.ts";
@@ -23,6 +26,10 @@ test("getWebBodyMode maps web ownership to active", () => {
 
 test("getWebBodyMode maps sleeping currentMode to sleep", () => {
   assert.equal(getWebBodyMode(state({ currentMode: "sleeping" })), "sleep");
+});
+
+test("getWebBodyMode maps resting currentMode to rest", () => {
+  assert.equal(getWebBodyMode(state({ currentMode: "resting" })), "rest");
 });
 
 test("getWebBodyMode maps default state to idle", () => {
@@ -47,7 +54,11 @@ test("developer panel model exposes real Brain-lite currentMode and derived webM
     currentMode: "speaking",
     currentEmotion: "happy",
   });
-  const latestDecision = decisionLog();
+  const latestDecision = decisionLog({
+    metadata: {
+      physicalAvailable: false,
+    },
+  });
   const latestExpression = expressionIntent();
 
   const model = getDeveloperPanelModel(inputState, latestDecision, latestExpression);
@@ -56,9 +67,25 @@ test("developer panel model exposes real Brain-lite currentMode and derived webM
   assert.equal(model.currentMode, "speaking");
   assert.equal(model.webMode, "rest");
   assert.equal(model.physicalMode, "active");
+  assert.equal(model.physicalAvailable, false);
   assert.equal(model.currentEmotion, "happy");
   assert.equal(model.lastDecisionLog, latestDecision);
   assert.equal(model.latestExpressionIntent, latestExpression);
+});
+
+test("physical availability helper reads optional decision metadata", () => {
+  assert.equal(
+    getPhysicalAvailabilityFromDecisionLog(
+      decisionLog({
+        metadata: {
+          physicalAvailable: true,
+        },
+      }),
+    ),
+    true,
+  );
+  assert.equal(getPhysicalAvailabilityFromDecisionLog(decisionLog()), null);
+  assert.equal(getPhysicalAvailabilityFromDecisionLog(null), null);
 });
 
 test("web avatar command paths point to Brain-lite API aliases", () => {
@@ -105,6 +132,36 @@ test("web activation feedback distinguishes accepted request from ownership gran
   );
 });
 
+test("placeholder mouth helper keeps existing emotion classes", () => {
+  assert.equal(getPlaceholderMouthForEmotion("happy"), "smile");
+  assert.equal(getPlaceholderMouthForEmotion("curious"), "smile");
+  assert.equal(getPlaceholderMouthForEmotion("neutral"), "soft");
+  assert.equal(getPlaceholderMouthForEmotion("sleepy"), "soft");
+  assert.equal(getPlaceholderMouthForEmotion("concerned"), "flat");
+});
+
+test("avatar subtitle helper prefers explicit non-LLM intent text", () => {
+  assert.equal(getAvatarSubtitleText(null), "Quiet presence.");
+  assert.equal(
+    getAvatarSubtitleText(
+      expressionIntent({
+        kind: "greeting",
+        text: "  Hello from Brain-lite.  ",
+      }),
+    ),
+    "Hello from Brain-lite.",
+  );
+  assert.equal(
+    getAvatarSubtitleText(
+      expressionIntent({
+        target: "physical",
+        kind: "body.sleep",
+      }),
+    ),
+    "Physical bust is held in safe sleep pose.",
+  );
+});
+
 function state(overrides: Partial<AliaState> = {}): AliaState {
   return {
     activeBody: "none",
@@ -134,7 +191,9 @@ function decisionLog(overrides: Partial<DecisionLogEntry> = {}): DecisionLogEntr
   };
 }
 
-function expressionIntent(): ExpressionIntent {
+function expressionIntent(
+  overrides: Partial<ExpressionIntent> = {},
+): ExpressionIntent {
   return {
     id: "intent-test",
     kind: "body.rest",
@@ -144,5 +203,6 @@ function expressionIntent(): ExpressionIntent {
     abstractPose: "closed_eyes_lowered_head_low_presence",
     reason: "test_expression",
     createdAt: "2026-06-29T00:00:00.000Z",
+    ...overrides,
   };
 }

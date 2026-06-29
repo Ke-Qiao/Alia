@@ -8,3 +8,18 @@ coverage/
 .env.*
 !.env.example
 .DS_Store
+
+# Paid / local avatar assets
+apps/web/public/avatar/*
+!apps/web/public/avatar/.gitkeep
+
+# Local exported avatar files accidentally placed at repo root
+*.vrm
+*.VRM
+*.glb
+*.GLB
+*.unitypackage
+*.fbx
+*.FBX
+*.psd
+*.PSD
