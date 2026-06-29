@@ -19,8 +19,15 @@ test("physical active blocks web session acquisition", () => {
   assertHasIntent(result.intents, "web", "body.rest");
   assertLogReasonIncludes(result.logs, "physical_currently_active");
   assert.equal(
-    result.logs.find((log) => log.decision === "ownership.web_acquired")
+    result.logs.find((log) => log.decision === "ownership.web_acquire_rejected")
       ?.accepted,
+    false,
+  );
+  assert.equal(
+    result.logs.some(
+      (log) =>
+        log.decision === "ownership.web_acquired" && log.accepted === false,
+    ),
     false,
   );
 });
@@ -36,6 +43,11 @@ test("physical active rejects web acquire request with explicit reason", () => {
   assert.equal(result.state.activeBody, "physical");
   assertHasIntent(result.intents, "web", "body.rest");
   assertLogReasonIncludes(result.logs, "physical_currently_active");
+  assert.equal(
+    result.logs.find((log) => log.decision === "ownership.web_acquire_rejected")
+      ?.accepted,
+    false,
+  );
 });
 
 test("web active blocks presence from acquiring physical ownership", () => {
@@ -207,7 +219,7 @@ test("physical unavailable rejects physical acquire requests", () => {
   assertHasIntent(result.intents, "physical", "body.sleep");
   assertLogReasonIncludes(result.logs, "physical_unavailable_physical_acquire_rejected");
   assert.equal(
-    result.logs.find((log) => log.decision === "ownership.physical_acquired")
+    result.logs.find((log) => log.decision === "ownership.physical_acquire_rejected")
       ?.accepted,
     false,
   );

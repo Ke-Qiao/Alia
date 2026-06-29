@@ -9,6 +9,7 @@ import {
   WEB_AVATAR_REQUEST_ACTIVE_PATH,
   getDeveloperPanelModel,
   getPhysicalBodyMode,
+  getWebActivationFeedback,
   getWebBodyMode,
 } from "../src/avatarModel.ts";
 
@@ -68,6 +69,42 @@ test("web avatar command paths point to Brain-lite API aliases", () => {
   assert.equal(WEB_AVATAR_RELEASE_PATH, BRAIN_LITE_ENDPOINTS.webAvatarRelease);
 });
 
+test("web activation feedback reports granted ownership", () => {
+  assert.equal(
+    getWebActivationFeedback({
+      state: state({ activeBody: "web" }),
+      logs: [decisionLog()],
+    }),
+    "Web activation granted.",
+  );
+});
+
+test("web activation feedback reports physical-active rejection", () => {
+  assert.equal(
+    getWebActivationFeedback({
+      state: state({ activeBody: "physical" }),
+      logs: [
+        decisionLog({
+          decision: "ownership.web_acquire_rejected",
+          accepted: false,
+          reason: "physical_currently_active_web_acquire_rejected",
+        }),
+      ],
+    }),
+    "Web activation rejected: physical body is active.",
+  );
+});
+
+test("web activation feedback distinguishes accepted request from ownership grant", () => {
+  assert.equal(
+    getWebActivationFeedback({
+      state: state({ activeBody: "physical" }),
+      logs: [],
+    }),
+    "Web activation request accepted, but ownership was not granted.",
+  );
+});
+
 function state(overrides: Partial<AliaState> = {}): AliaState {
   return {
     activeBody: "none",
@@ -79,7 +116,7 @@ function state(overrides: Partial<AliaState> = {}): AliaState {
   };
 }
 
-function decisionLog(): DecisionLogEntry {
+function decisionLog(overrides: Partial<DecisionLogEntry> = {}): DecisionLogEntry {
   const currentState = state();
 
   return {
@@ -93,6 +130,7 @@ function decisionLog(): DecisionLogEntry {
     stateBefore: currentState,
     stateAfter: currentState,
     emittedIntentIds: [],
+    ...overrides,
   };
 }
 

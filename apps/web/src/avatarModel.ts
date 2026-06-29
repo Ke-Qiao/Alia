@@ -20,6 +20,11 @@ export interface DeveloperPanelModel {
   latestExpressionIntent: ExpressionIntent | null;
 }
 
+export interface WebActivationFeedbackInput {
+  state: AliaState;
+  logs: DecisionLogEntry[];
+}
+
 export function getWebBodyMode(state: AliaState): BodyMode {
   if (state.activeBody === "physical") {
     return "rest";
@@ -66,4 +71,26 @@ export function getDeveloperPanelModel(
     lastDecisionLog,
     latestExpressionIntent,
   };
+}
+
+export function getWebActivationFeedback(
+  result: WebActivationFeedbackInput,
+): string {
+  if (result.state.activeBody === "web") {
+    return "Web activation granted.";
+  }
+
+  const latestWebRejection = [...result.logs]
+    .reverse()
+    .find((log) => log.decision === "ownership.web_acquire_rejected");
+
+  if (latestWebRejection?.reason.includes("physical_currently_active")) {
+    return "Web activation rejected: physical body is active.";
+  }
+
+  if (latestWebRejection) {
+    return "Web activation rejected: request accepted but ownership was not granted.";
+  }
+
+  return "Web activation request accepted, but ownership was not granted.";
 }

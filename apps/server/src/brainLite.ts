@@ -497,8 +497,8 @@ export class BrainLite {
       logs,
       decision:
         requestedBody === "web"
-          ? "ownership.web_acquired"
-          : "ownership.physical_acquired",
+          ? "ownership.web_acquire_rejected"
+          : "ownership.physical_acquire_rejected",
       accepted: false,
       reason,
       stateBefore,

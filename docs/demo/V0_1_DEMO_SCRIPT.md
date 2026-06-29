@@ -123,6 +123,12 @@ pnpm demo:web-active
 ownership request through the demo CLI. For strict UI-origin verification, use
 the Web Avatar button or POST `/api/v0/web-avatar/request-active`.
 
+This command is a request, not a forced ownership switch. It succeeds only when
+`activeBody` is `none` or when the physical bust is unavailable and Web can be
+used as fallback. If the physical bust is still active, rejection is expected;
+use `pnpm demo:presence-lost`, restart Brain-lite, or follow Demo C's
+physical-unavailable fallback path to see Web become active.
+
 Expected Brain-lite state:
 
 - `activeBody` is `web`.
@@ -175,7 +181,8 @@ Expected Brain-lite state:
 - Physical unavailability does not automatically make Web active.
 - The optional presence command keeps `activeBody` as `none` and logs
   `physical_unavailable_presence_rejected`.
-- `pnpm demo:web-active` changes `activeBody` to `web`.
+- `pnpm demo:web-active` requests Web ownership and is granted because physical
+  is unavailable.
 - Decision logs include `physical_unavailable_web_fallback_acquired`.
 
 Expected Web Avatar state:
@@ -227,7 +234,9 @@ curl http://127.0.0.1:3000/logs
 - If the embedded receiver logs `brain-lite.connection.failed`, start
   Brain-lite first or restart `pnpm dev:embedded`.
 - If `demo:web-active` is rejected, the physical body is probably still active.
-  Run `pnpm demo:presence-lost` or restart Brain-lite.
+  This is expected Active Body Ownership behavior. Run
+  `pnpm demo:presence-lost`, restart Brain-lite, or use the
+  `pnpm demo:physical-unavailable` fallback path before requesting Web again.
 - If `demo:presence` does not activate physical, check whether
   `pnpm demo:physical-unavailable` was run. Use
   `pnpm demo:physical-available` to make the mock physical bust available
