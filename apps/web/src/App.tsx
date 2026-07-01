@@ -5,7 +5,10 @@ import type {
   DecisionLogEntry,
   ExpressionIntent,
 } from "@alia/protocol";
-import { getAvatarAssetStatus } from "./avatarAssets.ts";
+import {
+  type AvatarModelLoadState,
+  getAvatarAssetStatus,
+} from "./avatarAssets.ts";
 import {
   WEB_AVATAR_RELEASE_PATH,
   WEB_AVATAR_REQUEST_ACTIVE_PATH,
@@ -44,17 +47,6 @@ const navigationItems: { id: AppSection; label: string; description: string }[] 
   },
 ];
 
-const futureNavigationItems = [
-  {
-    label: "Voice",
-    description: "future",
-  },
-  {
-    label: "Memory",
-    description: "future",
-  },
-];
-
 const brainLiteUrl = (
   import.meta.env.VITE_BRAIN_LITE_URL ?? "http://127.0.0.1:3000"
 ).replace(/\/$/, "");
@@ -82,6 +74,8 @@ export function App() {
     pending: false,
     message: null,
   });
+  const [avatarModelLoadState, setAvatarModelLoadState] =
+    useState<AvatarModelLoadState>("loading");
 
   const webMode = useMemo(() => getWebBodyMode(state), [state]);
   const developerPanel = useMemo(
@@ -89,8 +83,8 @@ export function App() {
     [state, lastDecisionLog, latestExpressionIntent],
   );
   const avatarAssetStatus = useMemo(
-    () => getAvatarAssetStatus(configuredAvatarModelUrl, "failed"),
-    [],
+    () => getAvatarAssetStatus(configuredAvatarModelUrl, avatarModelLoadState),
+    [avatarModelLoadState],
   );
   const avatarSubtitleText = useMemo(
     () => getAvatarSubtitleText(latestExpressionIntent),
@@ -221,18 +215,6 @@ export function App() {
               <small>{item.description}</small>
             </button>
           ))}
-
-          {futureNavigationItems.map((item) => (
-            <button
-              key={item.label}
-              type="button"
-              className="nav-item nav-item-disabled"
-              disabled
-            >
-              <span>{item.label}</span>
-              <small>{item.description}</small>
-            </button>
-          ))}
         </nav>
 
         <div className="sidebar-note">v0.2 shell / mock-first runtime</div>
@@ -260,6 +242,9 @@ export function App() {
             <AvatarView
               state={state}
               webMode={webMode}
+              avatarModelUrl={avatarAssetStatus.resolvedModelUrl}
+              avatarModelLoadState={avatarAssetStatus.modelLoadState}
+              onAvatarModelLoadStateChange={setAvatarModelLoadState}
               connectionState={connectionState}
               commandPending={commandState.pending}
               commandMessage={commandState.message}

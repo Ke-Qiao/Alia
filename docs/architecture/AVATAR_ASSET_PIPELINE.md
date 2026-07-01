@@ -50,6 +50,11 @@ The placeholder must keep supporting the existing modes:
 - `sleep`
 - `idle`
 
+The Web app starts by attempting the resolved VRM URL. If the browser cannot
+load or parse that file, the renderer reports `failed`, Settings shows the
+fallback state, and `AvatarView` switches to the placeholder renderer without
+changing Brain-lite ownership state.
+
 ## Local Asset Directory
 
 Local model experiments may use:
@@ -64,7 +69,8 @@ Place the exported local model at:
 apps/web/public/avatar/alia.vrm
 ```
 
-This directory is intentionally ignored by Git except for `.gitkeep`:
+This file and the rest of the directory are intentionally ignored by Git except
+for `.gitkeep`:
 
 ```text
 apps/web/public/avatar/*

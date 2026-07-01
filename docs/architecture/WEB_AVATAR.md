@@ -17,6 +17,7 @@ contract.
 - subscribes to Brain-lite Server-Sent Events;
 - stores the latest `AliaState`, decision log, and expression intent;
 - requests or releases Web body ownership through Brain-lite;
+- owns the current Avatar model load state reported by the renderer;
 - passes derived view models to UI components.
 
 The UI is split by responsibility:
@@ -146,6 +147,10 @@ The settings area also shows Avatar Asset Status:
 - resolved model URL, defaulting to `/avatar/alia.vrm`
 - model load state
 - fallback status
+
+The Avatar page intentionally keeps this to a minimal overlay so the main view
+feels like Alia's digital body. Detailed renderer and asset diagnostics belong
+on the settings page, and demo ownership commands belong on the debug page.
 
 ## Asset Safety
 

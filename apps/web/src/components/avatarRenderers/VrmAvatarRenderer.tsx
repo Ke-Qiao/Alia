@@ -41,7 +41,10 @@ export function VrmAvatarRenderer(props: VrmAvatarRendererProps) {
 
   return (
     <div className={`vrm-avatar vrm-avatar-${webMode}`}>
-      <Canvas camera={{ position: [0, 1.15, 3.15], fov: 28 }}>
+      <Canvas
+        camera={{ position: [0, 1.15, 3.15], fov: 28 }}
+        gl={{ alpha: true, antialias: true }}
+      >
         <ambientLight intensity={1.7} />
         <directionalLight position={[2.4, 3.2, 2.6]} intensity={2.2} />
         <directionalLight position={[-2, 1.2, -1.6]} intensity={0.55} />

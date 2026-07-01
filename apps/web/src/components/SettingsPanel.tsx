@@ -45,12 +45,24 @@ export function SettingsPanel(props: SettingsPanelProps) {
               <dd>{avatarAssetStatus.currentRenderer} renderer active</dd>
             </div>
             <div>
+              <dt>runtime model format</dt>
+              <dd>{avatarAssetStatus.expectedModelFormat}</dd>
+            </div>
+            <div>
               <dt>configured avatar model URL</dt>
               <dd>{avatarAssetStatus.configuredModelUrl ?? "not configured"}</dd>
             </div>
             <div>
+              <dt>resolved avatar model URL</dt>
+              <dd>{avatarAssetStatus.resolvedModelUrl}</dd>
+            </div>
+            <div>
               <dt>renderer type</dt>
               <dd>{avatarAssetStatus.currentRenderer}</dd>
+            </div>
+            <div>
+              <dt>model load state</dt>
+              <dd>{avatarAssetStatus.modelLoadState}</dd>
             </div>
             <div>
               <dt>future model format</dt>
@@ -61,6 +73,25 @@ export function SettingsPanel(props: SettingsPanelProps) {
               <dd>{avatarAssetStatus.fallbackStatus}</dd>
             </div>
           </dl>
+        </PanelBlock>
+
+        <PanelBlock title="roadmap">
+          <ul className="roadmap-list" aria-label="Future Web Avatar roadmap">
+            <li>
+              <strong>Voice</strong>
+              <span>
+                Future-only exploration; not part of the v0.2 Web Avatar
+                runtime.
+              </span>
+            </li>
+            <li>
+              <strong>Memory</strong>
+              <span>
+                Future-only exploration; not part of the v0.2 Web Avatar
+                runtime.
+              </span>
+            </li>
+          </ul>
         </PanelBlock>
       </div>
 

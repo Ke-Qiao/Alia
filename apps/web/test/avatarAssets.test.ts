@@ -78,6 +78,15 @@ test("avatar asset status reports configured model URL and failed fallback", () 
   );
 });
 
+test("avatar asset status reports ready VRM renderer", () => {
+  const status = getAvatarAssetStatus(undefined, "ready");
+
+  assert.equal(status.currentRenderer, "vrm");
+  assert.equal(status.resolvedModelUrl, DEFAULT_AVATAR_MODEL_URL);
+  assert.equal(status.modelLoadState, "ready");
+  assert.equal(status.fallbackStatus, "VRM avatar active");
+});
+
 test("avatar fallback status is explicit for each load state", () => {
   assert.equal(getAvatarFallbackStatus("loading"), "loading avatar");
   assert.equal(getAvatarFallbackStatus("ready"), "VRM avatar active");

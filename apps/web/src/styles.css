@@ -728,11 +728,6 @@ button.secondary:hover:not(:disabled) {
   font-weight: 720;
 }
 
-.nav-item-disabled {
-  color: #68726d;
-  cursor: not-allowed;
-}
-
 .sidebar-note {
   margin-top: auto;
   border-top: 1px solid rgba(157, 173, 165, 0.12);
@@ -845,6 +840,54 @@ button.secondary:hover:not(:disabled) {
 
 .status-dot {
   flex: 0 0 auto;
+}
+
+.avatar-renderer-stack {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: min(62vw, 680px);
+  min-width: 320px;
+  height: min(72vh, 680px);
+  min-height: 520px;
+  place-items: center;
+}
+
+.avatar-renderer-stack > .avatar,
+.avatar-renderer-stack > .vrm-avatar {
+  grid-area: 1 / 1;
+}
+
+.vrm-avatar {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  transition:
+    opacity 260ms ease,
+    transform 260ms ease;
+}
+
+.vrm-avatar canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.vrm-avatar-rest {
+  opacity: 0.68;
+  transform: translateY(22px) scale(0.98);
+}
+
+.vrm-avatar-sleep {
+  opacity: 0.48;
+  transform: translateY(34px) scale(0.96);
+}
+
+.vrm-avatar-idle {
+  opacity: 0.82;
+  transform: translateY(10px);
 }
 
 .status-connected {
@@ -1042,6 +1085,37 @@ button.secondary:hover:not(:disabled) {
   color: #f4f8f3;
 }
 
+.roadmap-list {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.roadmap-list li {
+  display: grid;
+  gap: 5px;
+  border-top: 1px solid rgba(157, 173, 165, 0.1);
+  padding-top: 12px;
+}
+
+.roadmap-list li:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.roadmap-list strong {
+  color: #f4f8f3;
+  font-size: 0.9rem;
+}
+
+.roadmap-list span {
+  color: #9aa69f;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
 .demo-controls {
   gap: 12px;
 }
@@ -1081,7 +1155,7 @@ button.secondary:hover:not(:disabled) {
   }
 
   .sidebar-nav {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .sidebar-note {
@@ -1099,6 +1173,12 @@ button.secondary:hover:not(:disabled) {
 
   .avatar-stage {
     min-height: 68vh;
+  }
+
+  .avatar-renderer-stack {
+    width: min(92vw, 560px);
+    min-width: 280px;
+    min-height: 500px;
   }
 
   .debug-grid,
@@ -1139,6 +1219,10 @@ button.secondary:hover:not(:disabled) {
   .avatar-status-overlay {
     top: 12px;
     left: 12px;
+  }
+
+  .avatar-renderer-stack {
+    min-height: 460px;
   }
 
   .avatar-dialogue {

@@ -1,11 +1,20 @@
 import type { AliaState, BodyMode } from "@alia/protocol";
 
+import {
+  type AvatarModelLoadState,
+  type AvatarRendererSelection,
+  getAvatarRendererSelection,
+} from "../avatarAssets.ts";
 import type { ConnectionState } from "../brainLiteClient.ts";
 import { PlaceholderAvatarRenderer } from "./avatarRenderers/PlaceholderAvatarRenderer.tsx";
+import { VrmAvatarRenderer } from "./avatarRenderers/VrmAvatarRenderer.tsx";
 
 interface AvatarViewProps {
   state: AliaState;
   webMode: BodyMode;
+  avatarModelUrl: string;
+  avatarModelLoadState: AvatarModelLoadState;
+  onAvatarModelLoadStateChange: (loadState: AvatarModelLoadState) => void;
   connectionState: ConnectionState;
   commandPending: boolean;
   commandMessage: string | null;
@@ -16,6 +25,9 @@ export function AvatarView(props: AvatarViewProps) {
   const {
     state,
     webMode,
+    avatarModelUrl,
+    avatarModelLoadState,
+    onAvatarModelLoadStateChange,
     connectionState,
     commandPending,
     commandMessage,
@@ -25,6 +37,10 @@ export function AvatarView(props: AvatarViewProps) {
     state,
     commandPending,
     commandMessage,
+  );
+  const rendererSelection = getAvatarRendererSelection(
+    avatarModelUrl,
+    avatarModelLoadState,
   );
 
   return (
@@ -44,13 +60,65 @@ export function AvatarView(props: AvatarViewProps) {
         </div>
       </div>
 
-      <PlaceholderAvatarRenderer state={state} webMode={webMode} />
+      <AvatarRenderer
+        state={state}
+        webMode={webMode}
+        avatarModelLoadState={avatarModelLoadState}
+        rendererSelection={rendererSelection}
+        onAvatarModelLoadStateChange={onAvatarModelLoadStateChange}
+      />
 
       <div className="avatar-dialogue" aria-live="polite">
         <p>{subtitleText}</p>
         <span>{activationFeedback}</span>
       </div>
     </section>
+  );
+}
+
+interface AvatarRendererProps {
+  state: AliaState;
+  webMode: BodyMode;
+  avatarModelLoadState: AvatarModelLoadState;
+  rendererSelection: AvatarRendererSelection;
+  onAvatarModelLoadStateChange: (loadState: AvatarModelLoadState) => void;
+}
+
+function AvatarRenderer(props: AvatarRendererProps) {
+  const {
+    state,
+    webMode,
+    avatarModelLoadState,
+    rendererSelection,
+    onAvatarModelLoadStateChange,
+  } = props;
+
+  if (rendererSelection.renderer === "vrm") {
+    return (
+      <div className="avatar-renderer-stack">
+        {avatarModelLoadState === "loading" ? (
+          <PlaceholderAvatarRenderer
+            key="loading-placeholder"
+            state={state}
+            webMode={webMode}
+          />
+        ) : null}
+        <VrmAvatarRenderer
+          key="vrm"
+          modelUrl={rendererSelection.modelUrl}
+          webMode={webMode}
+          emotion={state.currentEmotion}
+          currentMode={state.currentMode}
+          onLoadStateChange={onAvatarModelLoadStateChange}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="avatar-renderer-stack">
+      <PlaceholderAvatarRenderer state={state} webMode={webMode} />
+    </div>
   );
 }
 

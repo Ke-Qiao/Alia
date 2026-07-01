@@ -20,8 +20,32 @@ test("getWebBodyMode maps physical ownership to rest", () => {
   assert.equal(getWebBodyMode(state({ activeBody: "physical" })), "rest");
 });
 
+test("getWebBodyMode keeps physical ownership ahead of currentMode", () => {
+  assert.equal(
+    getWebBodyMode(
+      state({
+        activeBody: "physical",
+        currentMode: "speaking",
+      }),
+    ),
+    "rest",
+  );
+});
+
 test("getWebBodyMode maps web ownership to active", () => {
   assert.equal(getWebBodyMode(state({ activeBody: "web" })), "active");
+});
+
+test("getWebBodyMode keeps web ownership ahead of sleep-like currentMode", () => {
+  assert.equal(
+    getWebBodyMode(
+      state({
+        activeBody: "web",
+        currentMode: "sleeping",
+      }),
+    ),
+    "active",
+  );
 });
 
 test("getWebBodyMode maps sleeping currentMode to sleep", () => {
